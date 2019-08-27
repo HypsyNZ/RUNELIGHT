@@ -10,8 +10,12 @@
 - Blast furnace has had many improvements (Auto-swaps coal bag for instance)
 - Auto-space: Press space automatically one certain dialogs.
 - Auto-escape: Press escape automatically when you click certain items.
+- Auto-dialogs: Press Yes automatically when its the option.
+- Auto-dialogs: Fetch Planks automatically from Butler.
+- Auto-dialogs: Press 2 automatically when making Oak Larders
 
-[osBuddy prices only work with your own HTTP-Service](https://github.com/Hermetism/runelight/wiki/SETUP-YOUR-OWN-HTTP-SERVICE)
+
+[osBuddy prices only work with your own HTTP-Service](https://github.com/hypsynz/runelight/wiki/SETUP-YOUR-OWN-HTTP-SERVICE)
 
 
 ## Project Layout
@@ -35,13 +39,13 @@ There are **MANY** other features but some of them are listed below.
 - HELPER is *Static*, so you can use it in any plugin with VERY little effort.
 - Move mouse using Fitts Law (Commented Out)
 - Move mouse using Berstein Polynominals (Commented Out, inaccurate)
-- Mouse mouse using [Natural Mouse (RS Version)](https://github.com/Hermetism/Natural-Mouse-RS)
+- Mouse mouse using [Natural Mouse (RS Version)](https://github.com/hypsynz/Natural-Mouse-RS)
 - Mark bank booths in entire regions
 - Manage and Compare Inventory and Bank (some deprecated)
 - Find random area to click on Widgets and WidgetItems
 - Find tile area (1 tile or several at once)
 - Example Generics/Enums
-- I'm really under selling this go [read everything here](runelite-client/src/main/java/net/runelite/client/plugins/helpers).
+- [Read everything here](runelite-client/src/main/java/net/runelite/client/plugins/helpers).
 
        
 ## NaturalMouseMotion RS
@@ -49,7 +53,7 @@ Contains custom flow templates and factory templates for Old School Runescape
 
 - Factory rs - Move at Normal Speed
 - Factory rsf - Move Fast
-- you will need this to use Helper [Natural-Mouse-RS](https://github.com/Hermetism/Natural-Mouse-RS) unless you want to make your own
+- you will need this to use Helper [Natural-Mouse-RS](https://github.com/hypsynz/Natural-Mouse-RS)
 - All random flows are 125 doubles in len
 - randomFlowLow() - between (1) and (50) 
 - randomFlowLowest() -between (1) and (25)
