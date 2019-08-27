@@ -25,177 +25,215 @@
 
 package net.runelite.client.plugins.fightcave;
 
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.Graphics2D;
-import java.awt.Rectangle;
-import java.awt.image.BufferedImage;
-import javax.inject.Inject;
-import javax.inject.Singleton;
-import net.runelite.api.Client;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Point;
-import net.runelite.api.Prayer;
-import net.runelite.api.SpriteID;
+import net.runelite.api.*;
+import net.runelite.client.config.ConfigManager;
 import net.runelite.client.game.SpriteManager;
-import net.runelite.client.ui.overlay.Overlay;
-import net.runelite.client.ui.overlay.OverlayLayer;
-import net.runelite.client.ui.overlay.OverlayPosition;
-import net.runelite.client.ui.overlay.OverlayPriority;
-import net.runelite.client.ui.overlay.OverlayUtil;
+import net.runelite.client.plugins.helpers.HelperPlugin;
+import net.runelite.client.plugins.helpers.HelperWidget;
+import net.runelite.client.ui.overlay.*;
 import net.runelite.client.util.ImageUtil;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.util.concurrent.Executors;
+
+import static net.runelite.client.plugins.helpers.HelperDelay.rand10to100;
+import static net.runelite.client.plugins.helpers.HelperDelay.rand35to70;
+import static net.runelite.client.plugins.helpers.HelperInput.Click;
+import static net.runelite.client.plugins.helpers.HelperInput.Delay;
+import static net.runelite.client.plugins.helpers.HelperPlugin.menuTarget;
+import static net.runelite.client.plugins.helpers.HelperWidget.PrayMageEnabled;
+
+@Slf4j
 @Singleton
-public class FightCaveOverlay extends Overlay
-{
-	private final FightCavePlugin plugin;
-	private final Client client;
-	private final SpriteManager spriteManager;
+public class FightCaveOverlay extends Overlay {
+    private final FightCavePlugin plugin;
+    private final Client client;
+    private final SpriteManager spriteManager;
 
-	@Inject
-	FightCaveOverlay(final Client client, final FightCavePlugin plugin, final SpriteManager spriteManager)
-	{
-		this.client = client;
-		this.plugin = plugin;
-		this.spriteManager = spriteManager;
-		setPosition(OverlayPosition.DYNAMIC);
-		setPriority(OverlayPriority.HIGHEST);
-		setLayer(OverlayLayer.ALWAYS_ON_TOP);
-	}
+    @Inject
+    private ConfigManager configManager;
 
-	@Override
-	public Dimension render(Graphics2D graphics)
-	{
-		for (FightCaveContainer npc : plugin.getFightCaveContainer())
-		{
-			if (npc.getNpc() == null)
-			{
-				continue;
-			}
+    @Inject
+    FightCaveOverlay(final Client client, final FightCavePlugin plugin, final SpriteManager spriteManager, ConfigManager configManager) {
+        this.client = client;
+        this.plugin = plugin;
+        this.spriteManager = spriteManager;
+        this.configManager = configManager;
+        setPosition(OverlayPosition.DYNAMIC);
+        setPriority(OverlayPriority.HIGHEST);
+        setLayer(OverlayLayer.ALWAYS_ON_TOP);
+    }
 
-			final int ticksLeft = npc.getTicksUntilAttack();
-			final FightCaveContainer.AttackStyle attackStyle = npc.getAttackStyle();
+    private boolean onceone = false;
+    private boolean oncetwo = false;
+    private boolean needFinish = false;
 
-			if (ticksLeft <= 0)
-			{
-				continue;
-			}
+    @Override
+    public Dimension render(Graphics2D graphics) {
 
-			final String ticksLeftStr = String.valueOf(ticksLeft);
-			final int font = plugin.getFontStyle().getFont();
-			final boolean shadows = plugin.isShadows();
-			Color color = (ticksLeft <= 1 ? Color.WHITE : attackStyle.getColor());
-			final Point canvasPoint = npc.getNpc().getCanvasTextLocation(graphics, Integer.toString(ticksLeft), 0);
+        String tempRunning = configManager.getConfiguration("fightcave", "run");
 
-			if (npc.getNpcName().equals("TzTok-Jad"))
-			{
-				color = (ticksLeft <= 1 || ticksLeft == 8 ? attackStyle.getColor() : Color.WHITE);
+        for (FightCaveContainer npc : plugin.getFightCaveContainer()) {
+            if (npc.getNpc() == null) {
+                continue;
+            }
 
-				BufferedImage pray = getPrayerImage(npc.getAttackStyle());
+            final int ticksLeft = npc.getTicksUntilAttack();
+            final FightCaveContainer.AttackStyle attackStyle = npc.getAttackStyle();
 
-				if (pray == null)
-				{
-					continue;
-				}
+            if (ticksLeft <= 0) {
+                continue;
+            }
 
-				renderImageLocation(graphics, npc.getNpc().getCanvasImageLocation(ImageUtil.resizeImage(pray, 36, 36), 0), pray, 12, 30);
-			}
+            final String ticksLeftStr = String.valueOf(ticksLeft);
+            final int font = plugin.getFontStyle().getFont();
+            final boolean shadows = plugin.isShadows();
+            Color color = (ticksLeft <= 1 ? Color.WHITE : attackStyle.getColor());
+            final Point canvasPoint = npc.getNpc().getCanvasTextLocation(graphics, Integer.toString(ticksLeft), 0);
 
-			OverlayUtil.renderTextLocation(graphics, ticksLeftStr, plugin.getTextSize(), font, color, canvasPoint, shadows, 0);
-		}
+            if (npc.getNpcName().equals("TzTok-Jad")) {
+                color = (ticksLeft <= 1 || ticksLeft == 8 ? attackStyle.getColor() : Color.WHITE);
 
-		if (plugin.isTickTimersWidget())
-		{
+                BufferedImage pray = getPrayerImage(npc.getAttackStyle());
 
-			if (!plugin.getMageTicks().isEmpty())
-			{
-				widgetHandler(graphics,
-					Prayer.PROTECT_FROM_MAGIC,
-					plugin.getMageTicks().get(0) == 1 ? Color.WHITE : Color.CYAN,
-					Integer.toString(plugin.getMageTicks().get(0)),
-					plugin.isShadows()
-				);
-			}
-			if (!plugin.getRangedTicks().isEmpty())
-			{
-				widgetHandler(graphics,
-					Prayer.PROTECT_FROM_MISSILES,
-					plugin.getRangedTicks().get(0) == 1 ? Color.WHITE : Color.GREEN,
-					Integer.toString(plugin.getRangedTicks().get(0)),
-					plugin.isShadows()
-				);
-			}
-			if (!plugin.getMeleeTicks().isEmpty())
-			{
-				widgetHandler(graphics,
-					Prayer.PROTECT_FROM_MELEE,
-					plugin.getMeleeTicks().get(0) == 1 ? Color.WHITE : Color.RED,
-					Integer.toString(plugin.getMeleeTicks().get(0)),
-					plugin.isShadows()
-				);
-			}
-		}
-		return null;
-	}
+                if (pray == null) {
+                    continue;
+                }
 
-	private void widgetHandler(Graphics2D graphics, Prayer prayer, Color color, String ticks, boolean shadows)
-	{
-		if (prayer != null)
-		{
-			Rectangle bounds = OverlayUtil.renderPrayerOverlay(graphics, client, prayer, color);
+                renderImageLocation(graphics, npc.getNpc().getCanvasImageLocation(ImageUtil.resizeImage(pray, 36, 36), 0), pray, 12, 30);
+            }
 
-			if (bounds != null)
-			{
-				renderTextLocation(graphics, ticks, 16, plugin.getFontStyle().getFont(), color, centerPoint(bounds), shadows);
-			}
-		}
-	}
+            OverlayUtil.renderTextLocation(graphics, ticksLeftStr, plugin.getTextSize(), font, color, canvasPoint, shadows, 0);
+        }
 
-	private BufferedImage getPrayerImage(FightCaveContainer.AttackStyle attackStyle)
-	{
-		switch (attackStyle)
-		{
-			case MAGE:
-				return spriteManager.getSprite(SpriteID.PRAYER_PROTECT_FROM_MAGIC, 0);
-			case MELEE:
-				return spriteManager.getSprite(SpriteID.PRAYER_PROTECT_FROM_MELEE, 0);
-			case RANGE:
-				return spriteManager.getSprite(SpriteID.PRAYER_PROTECT_FROM_MISSILES, 0);
-		}
-		return null;
-	}
+        if (plugin.isTickTimersWidget()) {
+            if (!plugin.getRangedTicks().isEmpty()) {
+                widgetHandler(graphics,
+                        Prayer.PROTECT_FROM_MISSILES,
+                        plugin.getRangedTicks().get(0) == 1 ? Color.WHITE : Color.GREEN,
+                        Integer.toString(plugin.getRangedTicks().get(0)),
+                        plugin.isShadows()
+                );
+            }
+            if (!plugin.getMeleeTicks().isEmpty()) {
+                widgetHandler(graphics,
+                        Prayer.PROTECT_FROM_MELEE,
+                        plugin.getMeleeTicks().get(0) == 1 ? Color.WHITE : Color.RED,
+                        Integer.toString(plugin.getMeleeTicks().get(0)),
+                        plugin.isShadows()
+                );
+            }
+            if (!plugin.getMageTicks().isEmpty()) {
 
-	private void renderImageLocation(Graphics2D graphics, Point imgLoc, BufferedImage image, int xOffset, int yOffset)
-	{
-		int x = imgLoc.getX() + xOffset;
-		int y = imgLoc.getY() - yOffset;
+                widgetHandler(graphics,
+                        Prayer.PROTECT_FROM_MAGIC,
+                        plugin.getMageTicks().get(0) == 1 ? Color.WHITE : Color.CYAN,
+                        Integer.toString(plugin.getMageTicks().get(0)),
+                        plugin.isShadows()
+                );
 
-		graphics.drawImage(image, x, y, null);
-	}
+                if (WaveOverlay.booleanFromString(tempRunning) || needFinish) {
 
-	private void renderTextLocation(Graphics2D graphics, String txtString, int fontSize, int fontStyle, Color fontColor, Point canvasPoint, boolean shadows)
-	{
-		graphics.setFont(new Font("Arial", fontStyle, fontSize));
-		if (canvasPoint != null)
-		{
-			final Point canvasCenterPoint = new Point(
-				canvasPoint.getX() - 3,
-				canvasPoint.getY() + 6);
-			final Point canvasCenterPoint_shadow = new Point(
-				canvasPoint.getX() - 2,
-				canvasPoint.getY() + 7);
-			if (shadows)
-			{
-				OverlayUtil.renderTextLocation(graphics, canvasCenterPoint_shadow, txtString, Color.BLACK);
-			}
-			OverlayUtil.renderTextLocation(graphics, canvasCenterPoint, txtString, fontColor);
-		}
-	}
+                    if (menuTarget.contains("magic")) {
 
-	private Point centerPoint(Rectangle rect)
-	{
-		int x = (int) (rect.getX() + rect.getWidth() / 2);
-		int y = (int) (rect.getY() + rect.getHeight() / 2);
-		return new Point(x, y);
-	}
+                        if (plugin.getMageTicks().get(0) == 4 && !onceone && PrayMageEnabled) {
+                            onceone = true;
+                            needFinish = true;
+                            Executors.newSingleThreadExecutor().execute(() -> {
+                                Delay(rand10to100);
+                                Delay(rand35to70);
+                                Delay(rand35to70);
+                                Delay(rand10to100);
+                                Click();
+                            });
+
+                        } else if (plugin.getMageTicks().get(0) == 2 && !oncetwo && needFinish && !PrayMageEnabled) {
+                            oncetwo = true;
+                            needFinish = false;
+                            Executors.newSingleThreadExecutor().execute(() -> {
+                                Delay(rand10to100);
+                                Delay(rand35to70);
+                                Delay(rand35to70);
+                                Delay(rand10to100);
+                                Click();
+                            });
+
+                        } else if (plugin.getMageTicks().get(0) == 1) {
+                            onceone = false;
+                            oncetwo = false;
+                        }
+
+                    }else {
+                        onceone = false;
+                        oncetwo = false;
+                    }
+
+                } else {
+                    onceone = false;
+                    oncetwo = false;
+                }
+            }else {
+                onceone = false;
+                oncetwo = false;
+            }
+        }
+        return null;
+    }
+
+
+    private void widgetHandler(Graphics2D graphics, Prayer prayer, Color color, String ticks, boolean shadows) {
+        if (prayer != null) {
+            Rectangle bounds = OverlayUtil.renderPrayerOverlay(graphics, client, prayer, color);
+
+            if (bounds != null) {
+                renderTextLocation(graphics, ticks, 16, plugin.getFontStyle().getFont(), color, centerPoint(bounds), shadows);
+            }
+        }
+    }
+
+    private BufferedImage getPrayerImage(FightCaveContainer.AttackStyle attackStyle) {
+        switch (attackStyle) {
+            case MAGE:
+                return spriteManager.getSprite(SpriteID.PRAYER_PROTECT_FROM_MAGIC, 0);
+            case MELEE:
+                return spriteManager.getSprite(SpriteID.PRAYER_PROTECT_FROM_MELEE, 0);
+            case RANGE:
+                return spriteManager.getSprite(SpriteID.PRAYER_PROTECT_FROM_MISSILES, 0);
+        }
+        return null;
+    }
+
+    private void renderImageLocation(Graphics2D graphics, Point imgLoc, BufferedImage image, int xOffset, int yOffset) {
+        int x = imgLoc.getX() + xOffset;
+        int y = imgLoc.getY() - yOffset;
+
+        graphics.drawImage(image, x, y, null);
+    }
+
+    private void renderTextLocation(Graphics2D graphics, String txtString, int fontSize, int fontStyle, Color fontColor, Point canvasPoint, boolean shadows) {
+        graphics.setFont(new Font("Arial", fontStyle, fontSize));
+        if (canvasPoint != null) {
+            final Point canvasCenterPoint = new Point(
+                    canvasPoint.getX() - 3,
+                    canvasPoint.getY() + 6);
+            final Point canvasCenterPoint_shadow = new Point(
+                    canvasPoint.getX() - 2,
+                    canvasPoint.getY() + 7);
+            if (shadows) {
+                OverlayUtil.renderTextLocation(graphics, canvasCenterPoint_shadow, txtString, Color.BLACK);
+            }
+            OverlayUtil.renderTextLocation(graphics, canvasCenterPoint, txtString, fontColor);
+        }
+    }
+
+    private Point centerPoint(Rectangle rect) {
+        int x = (int) (rect.getX() + rect.getWidth() / 2);
+        int y = (int) (rect.getY() + rect.getHeight() / 2);
+        return new Point(x, y);
+    }
 }

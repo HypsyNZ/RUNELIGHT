@@ -61,7 +61,6 @@ import net.runelite.client.ui.components.PluginErrorPanel;
 import net.runelite.client.util.ColorUtil;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.StackFormatter;
-import net.runelite.http.api.loottracker.LootTrackerClient;
 
 @Slf4j
 @Singleton
@@ -392,12 +391,6 @@ class LootTrackerPanel extends PluginPanel
 			logsContainer.removeAll();
 			logsContainer.repaint();
 
-			// Delete all loot, or loot matching the current view
-			LootTrackerClient client = plugin.getLootTrackerClient();
-			if (client != null && config.syncPanel())
-			{
-				client.delete(currentView);
-			}
 		});
 
 		// Create popup menu
@@ -727,12 +720,6 @@ class LootTrackerPanel extends PluginPanel
 			logsContainer.remove(box);
 			logsContainer.repaint();
 
-			LootTrackerClient client = plugin.getLootTrackerClient();
-			// Without loot being grouped we have no way to identify single kills to be deleted
-			if (client != null && groupLoot && config.syncPanel())
-			{
-				client.delete(box.getId());
-			}
 		});
 
 		popupMenu.add(reset);

@@ -24,70 +24,66 @@
  */
 package net.runelite.client.plugins.blastfurnace;
 
-import java.awt.Dimension;
-import java.awt.Graphics2D;
-import java.awt.image.BufferedImage;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import net.runelite.api.Client;
-import static net.runelite.api.MenuOpcode.RUNELITE_OVERLAY_CONFIG;
+import net.runelite.api.ItemID;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.ui.overlay.Overlay;
-import static net.runelite.client.ui.overlay.OverlayManager.OPTION_CONFIGURE;
-import net.runelite.client.ui.overlay.OverlayMenuEntry;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.components.ComponentOrientation;
 import net.runelite.client.ui.overlay.components.ImageComponent;
 import net.runelite.client.ui.overlay.components.PanelComponent;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+
+import static net.runelite.client.plugins.blastfurnace.BlastFurnacePlugin.getDispenserAndConveyor;
+
 @Singleton
-class BlastFurnaceOverlay extends Overlay
-{
-	private final Client client;
-	private final BlastFurnacePlugin plugin;
-	private final PanelComponent imagePanelComponent = new PanelComponent();
+class BlastFurnaceOverlay extends Overlay {
+    private final Client client;
+    private final BlastFurnacePlugin plugin;
+    private final PanelComponent imagePanelComponent = new PanelComponent();
 
-	@Inject
-	private ItemManager itemManager;
+    @Inject
+    private ItemManager itemManager;
 
-	@Inject
-	BlastFurnaceOverlay(final Client client, final BlastFurnacePlugin plugin)
-	{
-		super(plugin);
-		this.plugin = plugin;
-		this.client = client;
-		setPosition(OverlayPosition.TOP_LEFT);
-		imagePanelComponent.setOrientation(ComponentOrientation.HORIZONTAL);
-		getMenuEntries().add(new OverlayMenuEntry(RUNELITE_OVERLAY_CONFIG, OPTION_CONFIGURE, "Blast furnace overlay"));
-	}
+    @Inject
+    BlastFurnaceOverlay(final Client client, final BlastFurnacePlugin plugin) {
+        super(plugin);
+        this.plugin = plugin;
+        this.client = client;
+        setPosition(OverlayPosition.TOP_LEFT);
+        imagePanelComponent.setOrientation(ComponentOrientation.HORIZONTAL);
+    }
 
-	@Override
-	public Dimension render(Graphics2D graphics)
-	{
-		if (plugin.getConveyorBelt() == null)
-		{
-			return null;
-		}
 
-		imagePanelComponent.getChildren().clear();
+    @Override
+    public Dimension render(Graphics2D graphics) {
 
-		for (BarsOres varbit : BarsOres.values())
-		{
-			int amount = client.getVar(varbit.getVarbit());
+        if (plugin.getConveyorBelt() == null) {
+            getDispenserAndConveyor(graphics,client,plugin);
+        }
 
-			if (amount == 0)
-			{
-				continue;
-			}
+        imagePanelComponent.getChildren().clear();
 
-			imagePanelComponent.getChildren().add(new ImageComponent(getImage(varbit.getItemID(), amount)));
-		}
+        for (BarsOres varbit : BarsOres.values()) {
+            int amount = client.getVar(varbit.getVarbit());
 
-		return imagePanelComponent.render(graphics);
-	}
+            if (amount == 0) {
+                continue;
+            }
 
-	private BufferedImage getImage(int itemID, int amount)
-	{
-		return itemManager.getImage(itemID, amount, true);
-	}
+            imagePanelComponent.getChildren().add(new ImageComponent(getImage(varbit.getItemID(), amount)));
+        }
+
+        imagePanelComponent.getChildren().add(new ImageComponent(getImage(ItemID.COAL_BAG, plugin.getAmountOfCoalInCoalBag())));
+
+        return imagePanelComponent.render(graphics);
+    }
+
+    private BufferedImage getImage(int itemID, int amount) {
+        return itemManager.getImage(itemID, amount, true);
+    }
 }

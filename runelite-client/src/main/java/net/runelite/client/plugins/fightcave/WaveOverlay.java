@@ -33,6 +33,8 @@ import java.util.List;
 import java.util.Map;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+
+import net.runelite.client.config.ConfigManager;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayPosition;
@@ -51,10 +53,14 @@ class WaveOverlay extends Overlay
 	private final PanelComponent panelComponent = new PanelComponent();
 
 	@Inject
-	private WaveOverlay(final FightCaveConfig config, final FightCavePlugin plugin)
+	private ConfigManager configManager;
+
+	@Inject
+	private WaveOverlay(final FightCaveConfig config, final FightCavePlugin plugin, ConfigManager configManager)
 	{
 		this.config = config;
 		this.plugin = plugin;
+		this.configManager = configManager;
 		setPosition(OverlayPosition.TOP_RIGHT);
 	}
 
@@ -76,10 +82,14 @@ class WaveOverlay extends Overlay
 		return outputLines;
 	}
 
+	static boolean booleanFromString(String string){
+		return string.equals("true");
+	}
+
 	@Override
 	public Dimension render(Graphics2D graphics)
 	{
-		if (!plugin.isValidRegion() || plugin.getCurrentWave() < 0)
+		if (plugin.getCurrentWave() < 0)
 		{
 			return null;
 		}
@@ -106,23 +116,40 @@ class WaveOverlay extends Overlay
 			addWaveInfo("Next wave", waveContents);
 		}
 
+		addRunInfo();
+
 		return panelComponent.render(graphics);
 	}
 
 	private void addWaveInfo(final String headerText, final Map<WaveMonster, Integer> waveContents)
 	{
+		TableComponent tableComponent = new TableComponent();
+
 		panelComponent.getChildren().add(TitleComponent.builder()
 			.text(headerText)
 			.color(HEADER_COLOR)
 			.build());
 
-
-		TableComponent tableComponent = new TableComponent();
 		tableComponent.setColumnAlignments(TableAlignment.CENTER);
-
 		for (String line : buildWaveLines(waveContents))
 		{
 			tableComponent.addRow(line);
+		}
+
+		if (!tableComponent.isEmpty())
+		{
+			panelComponent.getChildren().add(tableComponent);
+		}
+	}
+
+	private void addRunInfo()
+	{
+		TableComponent tableComponent = new TableComponent();
+		tableComponent.setColumnAlignments(TableAlignment.CENTER);
+
+		String tempRunning = configManager.getConfiguration("fightcave", "run");
+		if(tempRunning != null) {
+			tableComponent.addRow("Running " + booleanFromString(tempRunning));
 		}
 
 		if (!tableComponent.isEmpty())

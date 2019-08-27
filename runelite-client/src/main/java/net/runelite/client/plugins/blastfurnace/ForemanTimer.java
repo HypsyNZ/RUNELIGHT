@@ -35,7 +35,7 @@ class ForemanTimer extends Timer
 
 	ForemanTimer(BlastFurnacePlugin plugin, ItemManager itemManager)
 	{
-		super(10, ChronoUnit.MINUTES, itemManager.getImage(ItemID.COAL_BAG), plugin);
+		super(10, ChronoUnit.MINUTES, itemManager.getImage(ItemID.MINECART_TICKET), plugin);
 
 		setTooltip(TOOLTIP_TEXT);
 	}

@@ -41,7 +41,7 @@ import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.client.Notifier;
 import net.runelite.client.config.ChatColorConfig;
-import net.runelite.client.config.RuneLiteConfig;
+import net.runelite.client.config.RuneLightConfig;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -96,7 +96,7 @@ public class MotherlodePluginTest
 
 	@Mock
 	@Bind
-	private RuneLiteConfig runeliteConfig;
+	private RuneLightConfig runeliteConfig;
 
 	@Mock
 	@Bind

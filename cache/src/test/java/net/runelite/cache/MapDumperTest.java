@@ -40,7 +40,6 @@ import net.runelite.cache.fs.Archive;
 import net.runelite.cache.fs.Index;
 import net.runelite.cache.fs.Storage;
 import net.runelite.cache.fs.Store;
-import net.runelite.cache.util.XteaKeyManager;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
@@ -64,8 +63,6 @@ public class MapDumperTest
 	{
 		File base = StoreLocation.LOCATION,
 			outDir = folder.newFolder();
-		XteaKeyManager keyManager = new XteaKeyManager();
-		keyManager.loadKeys();
 
 		try (Store store = new Store(base))
 		{
@@ -76,8 +73,6 @@ public class MapDumperTest
 
 			for (int i = 0; i < MAX_REGIONS; i++)
 			{
-				int[] keys = keyManager.getKeys(i);
-
 				int x = i >> 8;
 				int y = i & 0xFF;
 
@@ -94,23 +89,6 @@ public class MapDumperTest
 				byte[] data = map.decompress(storage.loadArchive(map));
 
 				Files.write(data, new File(outDir, "m" + x + "_" + y + ".dat"));
-
-				if (keys != null)
-				{
-					try
-					{
-						data = land.decompress(storage.loadArchive(land), keys);
-					}
-					catch (IOException ex)
-					{
-						logger.info("Unable to decompress and load land " + x + "," + y + " (bad keys?)", ex);
-						continue;
-					}
-
-					logger.info("Decrypted region {} coords {},{}", i, x, y);
-
-					Files.write(data, new File(outDir, "l" + x + "_" + y + ".dat"));
-				}
 			}
 		}
 	}
@@ -120,8 +98,6 @@ public class MapDumperTest
 		Map<MapDefinition, LocationsDefinition> mapMap = new HashMap<>();
 		Storage storage = store.getStorage();
 		Index index = store.getIndex(IndexType.MAPS);
-		XteaKeyManager keyManager = new XteaKeyManager();
-		keyManager.loadKeys();
 
 		for (int i = 0; i < MAX_REGIONS; ++i)
 		{
@@ -140,24 +116,8 @@ public class MapDumperTest
 
 			byte[] data = map.decompress(storage.loadArchive(map));
 			MapDefinition mapDef = new MapLoader().load(x, y, data);
-			LocationsDefinition locDef = null;
 
-			int[] keys = keyManager.getKeys(i);
-			if (keys != null)
-			{
-				try
-				{
-					data = land.decompress(storage.loadArchive(land), keys);
-				}
-				catch (IOException ex)
-				{
-					continue;
-				}
-
-				locDef = new LocationsLoader().load(x, y, data);
-			}
-
-			mapMap.put(mapDef, locDef);
+			mapMap.put(mapDef, null);
 		}
 
 		return mapMap;

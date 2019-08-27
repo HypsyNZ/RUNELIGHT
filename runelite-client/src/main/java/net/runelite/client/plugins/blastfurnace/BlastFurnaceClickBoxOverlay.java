@@ -30,18 +30,13 @@ import java.awt.Graphics2D;
 import java.awt.geom.Area;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import net.runelite.api.Client;
-import net.runelite.api.EquipmentInventorySlot;
-import net.runelite.api.GameObject;
-import net.runelite.api.InventoryID;
-import net.runelite.api.Item;
-import net.runelite.api.ItemContainer;
-import net.runelite.api.ItemID;
-import net.runelite.api.Point;
-import net.runelite.api.Varbits;
+
+import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayPosition;
+
+import static net.runelite.client.plugins.blastfurnace.BlastFurnacePlugin.getDispenserAndConveyor;
 
 @Singleton
 class BlastFurnaceClickBoxOverlay extends Overlay
@@ -63,6 +58,10 @@ class BlastFurnaceClickBoxOverlay extends Overlay
 	public Dimension render(Graphics2D graphics)
 	{
 		int dispenserState = client.getVar(Varbits.BAR_DISPENSER);
+
+		if(plugin.getConveyorBelt() == null || plugin.getBarDispenser() == null){
+			getDispenserAndConveyor(graphics,client,plugin);
+		}
 
 		if (plugin.isShowConveyorBelt() && plugin.getConveyorBelt() != null)
 		{

@@ -35,6 +35,11 @@ import lombok.Getter;
 public enum Varbits
 {
 	/*
+	 * Current Withdraw Setting
+	 */
+	WITHDRAW_SETTING(6590),
+
+	/*
 	 * If chatbox is transparent or not
 	 */
 	TRANSPARENT_CHATBOX(4608),

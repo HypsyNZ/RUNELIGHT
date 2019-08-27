@@ -52,7 +52,7 @@ import net.runelite.client.chat.ChatMessageBuilder;
 import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.FlashNotification;
-import net.runelite.client.config.RuneLiteConfig;
+import net.runelite.client.config.RuneLightConfig;
 import net.runelite.client.ui.ClientUI;
 import net.runelite.client.util.OSType;
 
@@ -72,10 +72,10 @@ public class Notifier
 	private static final int MINIMUM_FLASH_DURATION_MILLIS = 2000;
 	private static final int MINIMUM_FLASH_DURATION_TICKS = MINIMUM_FLASH_DURATION_MILLIS / Constants.CLIENT_TICK_LENGTH;
 
-	private static final String appName = RuneLiteProperties.getTitle();
+	private static final String appName = RuneLightProperties.getTitle();
 
 	private final Client client;
-	private final RuneLiteConfig runeLiteConfig;
+	private final RuneLightConfig runeLiteConfig;
 	private final ClientUI clientUI;
 	private final ScheduledExecutorService executorService;
 	private final ChatMessageManager chatMessageManager;
@@ -88,7 +88,7 @@ public class Notifier
 	private Notifier(
 		final ClientUI clientUI,
 		final Client client,
-		final RuneLiteConfig runeliteConfig,
+		final RuneLightConfig runeliteConfig,
 		final ScheduledExecutorService executorService,
 		final ChatMessageManager chatMessageManager)
 	{

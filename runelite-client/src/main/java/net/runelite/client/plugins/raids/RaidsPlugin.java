@@ -96,10 +96,6 @@ import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
 import org.apache.commons.lang3.StringUtils;
 import static org.apache.commons.lang3.StringUtils.containsIgnoreCase;
-import net.runelite.client.ws.PartyMember;
-import net.runelite.client.ws.PartyService;
-import net.runelite.client.ws.WSClient;
-import net.runelite.http.api.ws.messages.party.PartyChatMessage;
 
 @PluginDescriptor(
 	name = "CoX Scouter",
@@ -201,12 +197,6 @@ public class RaidsPlugin extends Plugin
 	@Inject
 	private EventBus eventBus;
 	private boolean raidStarted;
-
-	@Inject
-	private PartyService party;
-
-	@Inject
-	private WSClient ws;
 
 	@Getter
 	private final List<String> roomWhitelist = new ArrayList<>();
@@ -723,20 +713,10 @@ public class RaidsPlugin extends Plugin
 				.append(raidData)
 				.build();
 
-		final PartyMember localMember = party.getLocalMember();
-		if (party.getMembers().isEmpty() || localMember == null)
-		{
 			chatMessageManager.queue(QueuedMessage.builder()
 				.type(ChatMessageType.FRIENDSCHATNOTIFICATION)
 				.runeLiteFormattedMessage(layoutMessage)
 				.build());
-		}
-		else
-		{
-			final PartyChatMessage message = new PartyChatMessage(layoutMessage);
-			message.setMemberId(localMember.getMemberId());
-			ws.send(message);
-		}
 
 		if (recordRaid() != null)
 		{

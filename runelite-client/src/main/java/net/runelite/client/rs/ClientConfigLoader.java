@@ -48,7 +48,7 @@ class ClientConfigLoader
 
 		final RSConfig config = new RSConfig();
 
-		try (final Response response = RuneLiteAPI.CLIENT.newCall(request).execute())
+		try (final Response response = RuneLiteAPI.RSCLIENT.newCall(request).execute())
 		{
 			if (!response.isSuccessful())
 			{

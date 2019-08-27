@@ -71,19 +71,13 @@ public class LoginScreenPlugin extends Plugin implements KeyListener
 	@Inject
 	private EventBus eventBus;
 
-	private String usernameCache;
-
-	private boolean syncUsername;
 	private boolean pasteEnabled;
-	private String username;
 
 	@Override
 	protected void startUp() throws Exception
 	{
 		updateConfig();
 		addSubscriptions();
-
-		applyUsername();
 		keyManager.registerKeyListener(this);
 	}
 
@@ -91,90 +85,18 @@ public class LoginScreenPlugin extends Plugin implements KeyListener
 	protected void shutDown() throws Exception
 	{
 		eventBus.unregister(this);
-
-		if (this.syncUsername)
-		{
-			client.getPreferences().setRememberedUsername(usernameCache);
-		}
-
 		keyManager.unregisterKeyListener(this);
 	}
 
 	private void addSubscriptions()
 	{
 		eventBus.subscribe(ConfigChanged.class, this, this::onConfigChanged);
-		eventBus.subscribe(GameStateChanged.class, this, this::onGameStateChanged);
-		eventBus.subscribe(SessionOpen.class, this, this::onSessionOpen);
 	}
 
 	@Provides
 	LoginScreenConfig getConfig(ConfigManager configManager)
 	{
 		return configManager.getConfig(LoginScreenConfig.class);
-	}
-
-	private void onGameStateChanged(GameStateChanged event)
-	{
-		if (!this.syncUsername)
-		{
-			return;
-		}
-
-		if (event.getGameState() == GameState.LOGIN_SCREEN)
-		{
-			applyUsername();
-		}
-		else if (event.getGameState() == GameState.LOGGED_IN)
-		{
-			String username = "";
-
-			if (client.getPreferences().getRememberedUsername() != null)
-			{
-				username = client.getUsername();
-			}
-
-			if (this.username.equals(username))
-			{
-				return;
-			}
-
-			log.debug("Saving username: {}", username);
-			config.username(username);
-			this.username = username;
-		}
-	}
-
-	private void onSessionOpen(SessionOpen event)
-	{
-		// configuation for the account is available now, so update the username
-		applyUsername();
-	}
-
-	private void applyUsername()
-	{
-		if (!this.syncUsername)
-		{
-			return;
-		}
-
-		GameState gameState = client.getGameState();
-		if (gameState == GameState.LOGIN_SCREEN)
-		{
-			String username = this.username;
-
-			if (Strings.isNullOrEmpty(username))
-			{
-				return;
-			}
-
-			// Save it only once
-			if (usernameCache == null)
-			{
-				usernameCache = client.getPreferences().getRememberedUsername();
-			}
-
-			client.getPreferences().setRememberedUsername(username);
-		}
 	}
 
 	@Override
@@ -254,8 +176,6 @@ public class LoginScreenPlugin extends Plugin implements KeyListener
 
 	private void updateConfig()
 	{
-		this.syncUsername = config.syncUsername();
 		this.pasteEnabled = config.pasteEnabled();
-		this.username = config.username();
 	}
 }

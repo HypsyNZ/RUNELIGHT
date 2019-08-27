@@ -36,6 +36,10 @@ package net.runelite.api.widgets;
  */
 public class WidgetID
 {
+	public static final int RESIZABLE_VIEWPORT_NPC_SHOP_INVENTORY = 300;
+	public static final int RESIZABLE_VIEWPORT_NPC_CONTACT_GROUP_ID = 75;
+	public static final int CHATBOX_CRAFT_GROUP_ID = 270;
+	public static final int FURNITURE_CREATION_MENU_GROUP_ID = 458;
 	public static final int FAIRY_RING_PANEL_GROUP_ID = 381;
 	public static final int FAIRY_RING_GROUP_ID = 398;
 	public static final int LOGOUT_PANEL_ID = 182;
@@ -155,6 +159,26 @@ public class WidgetID
 	public static final int SEED_VAULT_GROUP_ID = 631;
 	public static final int EXPLORERS_RING_ALCH_GROUP_ID = 483;
 
+
+	static class ResizableViewportBottomLineNPCContact {
+		static final int DARK_MAGE = 12;
+	}
+
+	static class ChatboxCraft{
+		static final int PARENT = 0;
+		static final int CRAFT_OPTION_1 = 14;
+	}
+
+	static class FurnitureMenu {
+		static final int MENU_OPTION_1 = 4;
+		static final int MENU_OPTION_2 = 5;
+		static final int MENU_OPTION_3 = 6;
+	}
+
+	static class ShopInventory {
+		static final int SHOP_INVENTORY_CONTAINER = 16;
+	}
+
 	static class WorldMap
 	{
 		static final int MAPVIEW = 6;
@@ -263,6 +287,11 @@ public class WidgetID
 		static final int DEPOSIT_EQUIPMENT = 44;
 		static final int INCINERATOR = 46;
 		static final int INCINERATOR_CONFIRM = 47;
+		static final int WITHDRAW_ONE = 28;
+		static final int WITHDRAW_FIVE = 30;
+		static final int WITHDRAW_TEN = 32;
+		static final int WITHDRAW_X = 34;
+		static final int WITHDRAW_ALL = 36;
 	}
 
 	static class GrandExchange
@@ -344,6 +373,7 @@ public class WidgetID
 		static final int RUN_ORB_TEXT = 23;
 		static final int SPEC_ORB = 28;
 		static final int WORLDMAP_ORB = 41;
+		static final int TOGGLE_SPEC_ORB = 30;
 	}
 
 	static class LoginClickToPlayScreen

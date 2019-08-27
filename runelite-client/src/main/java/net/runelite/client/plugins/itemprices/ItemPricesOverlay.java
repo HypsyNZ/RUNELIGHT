@@ -27,8 +27,12 @@ package net.runelite.client.plugins.itemprices;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
+import java.util.concurrent.ScheduledExecutorService;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+
+import io.reactivex.schedulers.Schedulers;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.Constants;
 import net.runelite.api.InventoryID;
@@ -47,10 +51,17 @@ import net.runelite.client.ui.overlay.tooltip.Tooltip;
 import net.runelite.client.ui.overlay.tooltip.TooltipManager;
 import net.runelite.client.util.ColorUtil;
 import net.runelite.client.util.StackFormatter;
+import net.runelite.http.api.osbuddy.OSBGrandExchangeClient;
 
+@Slf4j
 @Singleton
 class ItemPricesOverlay extends Overlay
 {
+	@Inject
+	private ScheduledExecutorService executorService;
+	private static final OSBGrandExchangeClient CLIENT = new OSBGrandExchangeClient();
+	private int gePrice = 0;
+
 	private static final int INVENTORY_ITEM_WIDGETID = WidgetInfo.INVENTORY.getPackedId();
 	private static final int BANK_INVENTORY_ITEM_WIDGETID = WidgetInfo.BANK_INVENTORY_ITEMS_CONTAINER.getPackedId();
 	private static final int BANK_ITEM_WIDGETID = WidgetInfo.BANK_ITEM_CONTAINER.getPackedId();
@@ -205,15 +216,36 @@ class ItemPricesOverlay extends Overlay
 			return null;
 		}
 
-		int gePrice = 0;
+		gePrice = 0;
 		int haPrice = 0;
 		int haProfit = 0;
 		final int itemHaPrice = Math.round(itemDef.getPrice() * Constants.HIGH_ALCHEMY_MULTIPLIER);
+		final int finalId = id;
 
-		if (plugin.isShowGEPrice())
-		{
-			gePrice = itemManager.getItemPrice(id);
+		if (plugin.isShowGEPrice()) {
+			executorService.submit(() ->
+			{
+				CLIENT.lookupItem(finalId)
+						.subscribeOn(Schedulers.io())
+						.subscribe(
+								(osbresult) ->
+								{
+									final int price = osbresult.getOverall_average();
+									gePrice = price;
+									log.debug("Osbuddy Price: {}", price);
+								},
+								(e) -> log.debug("Error getting price of item {}", finalId, e)
+						);
+
+				log.debug("Item Manager Price: {}", itemManager.getItemPrice(finalId));
+
+				if (itemManager.getItemPrice(finalId) > gePrice) {
+					gePrice = itemManager.getItemPrice(finalId);
+				}
+			});
 		}
+
+
 		if (plugin.isShowHAValue())
 		{
 			haPrice = itemManager.getAlchValue(id);

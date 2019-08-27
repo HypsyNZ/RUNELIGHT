@@ -47,205 +47,81 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 public class RuneLiteAPI
 {
-	private static String version;
-	private static String upstreamVersion;
-	private static int rsVersion;
+	private static final int OLDSCHOOL_VERSION = 181;
 
-	public static final String RUNELITE_AUTH = "RUNELITE-AUTH";
+	private static final String RUNELITE_VERSION = "1.5.31.1";
+	private static final String HTTP_SERVICE_VERSION = "1.5.30-SNAPSHOT";
+	private static final int HTTP_SERVICE_PORT = 8080;
+	private static final String commit = "9089756";
+
 	public static final OkHttpClient CLIENT;
-	public static final OkHttpClient RLP_CLIENT;
+	public static final OkHttpClient RSCLIENT;
 	public static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-	private static final Logger logger = LoggerFactory.getLogger(RuneLiteAPI.class);
-	private static final String BASE = "https://api.runelite.net";
-	private static final String RLPLUS_BASE = "https://api.runelitepl.us";
-	private static final String RLPLUS_SESSION = "https://session.runelitepl.us";
-	private static final String WSBASE = "https://api.runelite.net/ws";
-	private static final String STATICBASE = "https://static.runelite.net";
-	private static final String MAVEN_METADATA =
-		"http://repo.runelite.net/net/runelite/runelite-parent/maven-metadata.xml";
-	private static final Properties properties = new Properties();
-	private static String rlUserAgent;
-	private static String rlpUserAgent;
+
+	private static final String STATICBASE = "https://raw.githubusercontent.com/runelite/static.runelite.net/gh-pages/";
+	private static final String RUNELITE_BASE = "https://api.runelite.net/runelite-";
+	public static final String RUNELITE_PRICES = getRuneLiteBase() + "/item/prices.js";
+	public static final String RUNELITE_WORLDS = getRuneLiteBase() + "/worlds.js";
+	private static String userAgent = "RuneLite/" + RUNELITE_VERSION + "-" + commit + ("");;
 
 	static
 	{
-		try
-		{
-			InputStream in = RuneLiteAPI.class.getResourceAsStream("/runelite.properties");
-			properties.load(in);
-
-			version = properties.getProperty("runelite.version");
-			String rlpCommit = properties.getProperty("runelite.commit");
-			boolean dirty = Boolean.parseBoolean(properties.getProperty("runelite.dirty"));
-
-			rlpUserAgent = "RuneLitePlus/" + version + "-" + rlpCommit + (dirty ? "+" : "");
-			rlUserAgent = "RuneLitePlus/" + version;
-			rsVersion = Integer.parseInt(properties.getProperty("rs.version"));
-
-			parseMavenVersion();
-		}
-		catch (NumberFormatException e)
-		{
-			e.printStackTrace();
-			throw new RuntimeException("Version string has not been substituted; Re-run Gradle");
-		}
-		catch (IOException ex)
-		{
-			logger.error(null, ex);
-		}
 
 		CLIENT = new OkHttpClient.Builder()
-			.pingInterval(30, TimeUnit.SECONDS)
-			.connectTimeout(8655, TimeUnit.MILLISECONDS)
-			.writeTimeout(8655, TimeUnit.MILLISECONDS)
-			.addNetworkInterceptor(new Interceptor()
-			{
-				@Override
-				public Response intercept(Chain chain) throws IOException
-				{
-					Request userAgentRequest = chain.request()
-						.newBuilder()
-						.header("User-Agent", rlUserAgent)
-						.build();
-					return chain.proceed(userAgentRequest);
-				}
+			.connectTimeout(3655, TimeUnit.MILLISECONDS)
+			.writeTimeout(3655, TimeUnit.MILLISECONDS)
+			.followRedirects(false).followSslRedirects(true)
+			.addNetworkInterceptor(chain -> {
+				Request userAgentRequest = chain.request()
+					.newBuilder()
+					.header("User-Agent", userAgent)
+					.build();
+				return chain.proceed(userAgentRequest);
 			})
 			.build();
 
-		RLP_CLIENT = new OkHttpClient.Builder()
-			.pingInterval(30, TimeUnit.SECONDS)
-			.writeTimeout(5655, TimeUnit.MILLISECONDS)
-			.connectTimeout(2655, TimeUnit.MILLISECONDS)
-			.addNetworkInterceptor(new Interceptor()
-			{
-				@Override
-				public Response intercept(Chain chain) throws IOException
-				{
+		RSCLIENT = new OkHttpClient.Builder()
+				.pingInterval(30, TimeUnit.SECONDS)
+				.connectTimeout(3655, TimeUnit.MILLISECONDS)
+				.writeTimeout(3655, TimeUnit.MILLISECONDS)
+				.addNetworkInterceptor(chain -> {
 					Request userAgentRequest = chain.request()
-						.newBuilder()
-						.header("User-Agent", rlpUserAgent)
-						.build();
+							.newBuilder()
+							.header("User-Agent", userAgent)
+							.build();
 					return chain.proceed(userAgentRequest);
-				}
-			})
-			.build();
+				})
+				.build();
 	}
 
-	public static HttpUrl getRuneLitePlusSessionBase()
+	public static HttpUrl getLocalApiBase()
 	{
-		return HttpUrl.parse(RLPLUS_SESSION);
+		return HttpUrl.parse("http://localhost:"+ HTTP_SERVICE_PORT +"/http-service-" + HTTP_SERVICE_VERSION);
 	}
 
-	public static HttpUrl getApiBase()
+	public static HttpUrl getRuneLiteBase()
 	{
-		final String prop = System.getProperty("runelite.http-service.url");
-
-		if (prop != null && !prop.isEmpty())
-		{
-			return HttpUrl.parse(prop);
-		}
-
-		return HttpUrl.parse(BASE + "/runelite-" + getVersion());
-	}
-
-	public static HttpUrl getPlusApiBase()
-	{
-		return HttpUrl.parse(RLPLUS_BASE + "/http-service-" + getRlpVersion());
-	}
-
-	public static HttpUrl getStaticBase()
-	{
-		final String prop = System.getProperty("runelite.static.url");
-
-		if (prop != null && !prop.isEmpty())
-		{
-			return HttpUrl.parse(prop);
-		}
-
-		return HttpUrl.parse(STATICBASE);
-	}
-
-	public static HttpUrl getWsEndpoint()
-	{
-		final String prop = System.getProperty("runelite.ws.url");
-
-		if (prop != null && !prop.isEmpty())
-		{
-			return HttpUrl.parse(prop);
-		}
-
-		return HttpUrl.parse(WSBASE);
+		return HttpUrl.parse(RUNELITE_BASE + getVersion());
 	}
 
 	public static String getVersion()
 	{
-		return upstreamVersion;
+		return RUNELITE_VERSION;
+	}
+
+	public static HttpUrl getStaticBase()
+	{
+		return HttpUrl.parse(STATICBASE);
 	}
 
 	public static int getRsVersion()
 	{
-		return rsVersion;
-	}
-
-	public static String getRlpVersion()
-	{
-		return version;
-	}
-
-	private static byte[] downloadUrl(URL toDownload)
-	{
-		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-		InputStream stream;
-		try
-		{
-			byte[] chunk = new byte[4096];
-			int bytesRead;
-			URLConnection conn = toDownload.openConnection();
-			conn.setRequestProperty("User-Agent", rlpUserAgent);
-			stream = conn.getInputStream();
-
-			while ((bytesRead = stream.read(chunk)) > 0)
-			{
-				outputStream.write(chunk, 0, bytesRead);
-			}
-			stream.close();
-		}
-		catch (IOException e)
-		{
-			e.printStackTrace();
-			return null;
-		}
-
-		return outputStream.toByteArray();
-	}
-
-	private static void parseMavenVersion()
-	{
-		try (ByteArrayInputStream fis = new ByteArrayInputStream(downloadUrl(new URL(MAVEN_METADATA))))
-		{
-			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-			factory.setValidating(false);
-			factory.setIgnoringElementContentWhitespace(true);
-			DocumentBuilder builder = factory.newDocumentBuilder();
-			Document doc = builder.parse(fis);
-			NodeList versionList = doc.getElementsByTagName("version");
-			for (int i = 0; i != versionList.getLength(); i++)
-			{
-				Node node = versionList.item(i);
-				if (node.getTextContent() != null)
-				{
-					upstreamVersion = node.getTextContent();
-				}
-			}
-		}
-		catch (ParserConfigurationException | IOException | SAXException ex)
-		{
-			logger.error(null, ex);
-		}
+		return OLDSCHOOL_VERSION;
 	}
 }

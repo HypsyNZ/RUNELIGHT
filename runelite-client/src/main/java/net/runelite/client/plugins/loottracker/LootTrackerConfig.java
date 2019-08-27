@@ -91,29 +91,6 @@ public interface LootTrackerConfig extends Config
 	}
 
 	@ConfigItem(
-		keyName = "syncPanel",
-		name = "Synchronize panel contents",
-		description = "Synchronize you local loot tracker with your online (requires being logged in). This means" +
-			" that panel is filled with portion of your remote data on startup and deleting data in panel deletes them" +
-			" also on server."
-	)
-	default boolean syncPanel()
-	{
-		return true;
-	}
-
-	@ConfigItem(
-		keyName = "localPersistence",
-		name = "Local Record Persistence",
-		description = "Stores/syncs loot records locally in the JSON format. Note: records will not be saved locally" +
-			" if they are successfully saved online. "
-	)
-	default boolean localPersistence()
-	{
-		return true;
-	}
-
-	@ConfigItem(
 		keyName = "sortType",
 		name = "Sorting",
 		description = "The method for sorting Loot Tracker entries"

@@ -51,8 +51,6 @@ import net.runelite.client.game.ItemManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.infobox.InfoBoxManager;
-import net.runelite.client.ws.PartyService;
-import net.runelite.client.ws.WSClient;
 import org.apache.commons.lang3.ArrayUtils;
 
 @PluginDescriptor(
@@ -81,12 +79,6 @@ public class SpecialCounterPlugin extends Plugin
 	private ClientThread clientThread;
 
 	@Inject
-	private WSClient wsClient;
-
-	@Inject
-	private PartyService party;
-
-	@Inject
 	private InfoBoxManager infoBoxManager;
 
 	@Inject
@@ -99,8 +91,6 @@ public class SpecialCounterPlugin extends Plugin
 	protected void startUp()
 	{
 		addSubscriptions();
-
-		wsClient.registerMessage(SpecialCounterUpdate.class);
 	}
 
 	@Override
@@ -109,7 +99,6 @@ public class SpecialCounterPlugin extends Plugin
 		eventBus.unregister(this);
 
 		removeCounters();
-		wsClient.unregisterMessage(SpecialCounterUpdate.class);
 	}
 
 	private void addSubscriptions()
@@ -118,7 +107,6 @@ public class SpecialCounterPlugin extends Plugin
 		eventBus.subscribe(VarbitChanged.class, this, this::onVarbitChanged);
 		eventBus.subscribe(GameTick.class, this, this::onGameTick);
 		eventBus.subscribe(NpcDespawned.class, this, this::onNpcDespawned);
-		eventBus.subscribe(SpecialCounterUpdate.class, this, this::onSpecialCounterUpdate);
 	}
 
 	private void onGameStateChanged(GameStateChanged event)
@@ -178,12 +166,6 @@ public class SpecialCounterPlugin extends Plugin
 
 				updateCounter(specialWeapon, null, hit);
 
-				if (!party.getMembers().isEmpty())
-				{
-					final SpecialCounterUpdate specialCounterUpdate = new SpecialCounterUpdate(interactingId, specialWeapon, hit);
-					specialCounterUpdate.setMemberId(party.getLocalMember().getMemberId());
-					wsClient.send(specialCounterUpdate);
-				}
 			}
 		}
 	}
@@ -242,35 +224,6 @@ public class SpecialCounterPlugin extends Plugin
 		}
 	}
 
-	private void onSpecialCounterUpdate(SpecialCounterUpdate event)
-	{
-		if (party.getLocalMember().getMemberId().equals(event.getMemberId()))
-		{
-			return;
-		}
-
-		String name = party.getMemberById(event.getMemberId()).getName();
-		if (name == null)
-		{
-			return;
-		}
-
-		clientThread.invoke(() ->
-		{
-			// If not interacting with any npcs currently, add to interacting list
-			if (interactedNpcIds.isEmpty())
-			{
-				addInteracting(event.getNpcId());
-			}
-
-			// Otherwise we only add the count if it is against a npc we are already tracking
-			if (interactedNpcIds.contains(event.getNpcId()))
-			{
-				updateCounter(event.getWeapon(), name, event.getHit());
-			}
-		});
-	}
-
 	private SpecialWeapon usedSpecialWeapon()
 	{
 		ItemContainer equipment = client.getItemContainer(InventoryID.EQUIPMENT);
@@ -313,20 +266,6 @@ public class SpecialCounterPlugin extends Plugin
 		else
 		{
 			counter.addHits(hit);
-		}
-
-		// If in a party, add hit to partySpecs for the infobox tooltip
-		Map<String, Integer> partySpecs = counter.getPartySpecs();
-		if (!party.getMembers().isEmpty())
-		{
-			if (partySpecs.containsKey(name))
-			{
-				partySpecs.put(name, hit + partySpecs.get(name));
-			}
-			else
-			{
-				partySpecs.put(name, hit);
-			}
 		}
 	}
 

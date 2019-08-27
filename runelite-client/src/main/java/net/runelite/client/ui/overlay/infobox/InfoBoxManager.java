@@ -37,7 +37,7 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.events.ConfigChanged;
-import net.runelite.client.config.RuneLiteConfig;
+import net.runelite.client.config.RuneLightConfig;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.game.AsyncBufferedImage;
 import net.runelite.client.plugins.PluginDescriptor;
@@ -47,10 +47,10 @@ import net.runelite.client.plugins.PluginDescriptor;
 public class InfoBoxManager
 {
 	private final List<InfoBox> infoBoxes = new ArrayList<>();
-	private final RuneLiteConfig runeLiteConfig;
+	private final RuneLightConfig runeLiteConfig;
 
 	@Inject
-	private InfoBoxManager(final RuneLiteConfig runeLiteConfig, final EventBus eventbus)
+	private InfoBoxManager(final RuneLightConfig runeLiteConfig, final EventBus eventbus)
 	{
 		this.runeLiteConfig = runeLiteConfig;
 

@@ -32,40 +32,12 @@ import net.runelite.client.config.ConfigItem;
 public interface LoginScreenConfig extends Config
 {
 	@ConfigItem(
-		keyName = "syncusername",
-		name = "Sync username",
-		description = "Syncs the username that is currently remembered between computers"
-	)
-	default boolean syncUsername()
-	{
-		return true;
-	}
-
-	@ConfigItem(
 		keyName = "pasteenabled",
 		name = "Ctrl-V paste",
 		description = "Enables Ctrl+V pasting on the login screen"
 	)
 	default boolean pasteEnabled()
 	{
-		return false;
+		return true;
 	}
-
-	@ConfigItem(
-		keyName = "username",
-		name = "",
-		description = "",
-		hidden = true
-	)
-	default String username()
-	{
-		return "";
-	}
-
-	@ConfigItem(
-		keyName = "username",
-		name = "",
-		description = ""
-	)
-	void username(String key);
 }

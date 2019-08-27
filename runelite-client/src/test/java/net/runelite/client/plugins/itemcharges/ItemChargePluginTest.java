@@ -38,7 +38,7 @@ import net.runelite.api.ItemContainer;
 import net.runelite.api.ItemID;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.client.Notifier;
-import net.runelite.client.config.RuneLiteConfig;
+import net.runelite.client.config.RuneLightConfig;
 import net.runelite.client.ui.overlay.OverlayManager;
 import org.junit.Before;
 import org.junit.Test;
@@ -74,7 +74,7 @@ public class ItemChargePluginTest
 
 	@Mock
 	@Bind
-	private RuneLiteConfig runeLiteConfig;
+	private RuneLightConfig runeLiteConfig;
 
 	@Mock
 	@Bind

@@ -40,7 +40,7 @@ public class OSBGrandExchangeClient
 {
 	public Observable<OSBGrandExchangeResult> lookupItem(int itemId)
 	{
-		final HttpUrl url = RuneLiteAPI.getApiBase().newBuilder()
+		final HttpUrl url = RuneLiteAPI.getLocalApiBase().newBuilder()
 			.addPathSegment("osb")
 			.addPathSegment("ge")
 			.addQueryParameter("itemId", Integer.toString(itemId))

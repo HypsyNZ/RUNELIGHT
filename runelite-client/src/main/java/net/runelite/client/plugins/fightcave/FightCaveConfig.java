@@ -32,10 +32,32 @@ import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.Range;
 import net.runelite.client.config.Stub;
+import net.runelite.client.plugins.helpers.HelperInput;
 
 @ConfigGroup("fightcave")
 public interface FightCaveConfig extends Config
 {
+	@ConfigItem(
+			keyName = "runKey",
+			name = "Run Key",
+			description = "The key to start the herb plugin",
+			position = 1,
+			group = "Helper"
+	)
+	default HelperInput.KeyToPress keyForSwap() {
+		return HelperInput.KeyToPress.END;
+	}
+
+	@ConfigItem(
+			keyName = "run",
+			name = "",
+			description = "",
+			hidden = true
+	)
+	default boolean RunAltarBuiltIn() {
+		return false;
+	}
+
 	@ConfigItem(
 		position = 0,
 		keyName = "mainConfig",

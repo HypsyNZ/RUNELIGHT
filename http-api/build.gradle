@@ -1,5 +1,3 @@
-import org.apache.tools.ant.filters.ReplaceTokens
-
 description = 'Web API'
 
 dependencies {
@@ -19,13 +17,3 @@ dependencies {
     testImplementation group: 'org.slf4j', name: 'slf4j-simple', version: slf4j
 }
 
-processResources {
-    from file("src/main/resources/runelite.properties"), {
-        filter(ReplaceTokens, tokens: [
-                "projectver": project.version,
-                "rsver": rsversion.toString(),
-                "gitcommit": gitCommitShort,
-                "gitdirty": gitDirty.toString()
-        ])
-    }
-}

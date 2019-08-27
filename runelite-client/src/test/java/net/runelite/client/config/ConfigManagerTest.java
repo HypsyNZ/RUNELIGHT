@@ -32,7 +32,6 @@ import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
 import javax.inject.Inject;
-import net.runelite.client.account.AccountSession;
 import net.runelite.client.eventbus.EventBus;
 import org.junit.Assert;
 import org.junit.Before;
@@ -54,7 +53,7 @@ public class ConfigManagerTest
 
 	@Mock
 	@Bind
-	RuneLiteConfig runeliteConfig;
+	RuneLightConfig runeliteConfig;
 
 	@Inject
 	ConfigManager manager;
@@ -68,9 +67,6 @@ public class ConfigManagerTest
 	@Test
 	public void testGetConfig() throws IOException
 	{
-		AccountSession accountSession = new AccountSession(UUID.randomUUID(), Instant.now());
-		accountSession.setUsername("test");
-
 		manager.setConfiguration("test", "key", "moo");
 
 		TestConfig conf = manager.getConfig(TestConfig.class);
@@ -80,9 +76,6 @@ public class ConfigManagerTest
 	@Test
 	public void testGetConfigDefault() throws IOException
 	{
-		AccountSession accountSession = new AccountSession(UUID.randomUUID(), Instant.now());
-		accountSession.setUsername("test");
-
 		TestConfig conf = manager.getConfig(TestConfig.class);
 		Assert.assertEquals("default", conf.key());
 	}
@@ -90,9 +83,6 @@ public class ConfigManagerTest
 	@Test
 	public void testSetConfig() throws IOException
 	{
-		AccountSession accountSession = new AccountSession(UUID.randomUUID(), Instant.now());
-		accountSession.setUsername("test");
-
 		TestConfig conf = manager.getConfig(TestConfig.class);
 		conf.key("new value");
 
@@ -102,9 +92,6 @@ public class ConfigManagerTest
 	@Test
 	public void testGetConfigDescriptor() throws IOException
 	{
-		AccountSession accountSession = new AccountSession(UUID.randomUUID(), Instant.now());
-		accountSession.setUsername("test");
-
 		TestConfig conf = manager.getConfig(TestConfig.class);
 		ConfigDescriptor descriptor = manager.getConfigDescriptor(conf);
 		Assert.assertEquals(1, descriptor.getItems().size());

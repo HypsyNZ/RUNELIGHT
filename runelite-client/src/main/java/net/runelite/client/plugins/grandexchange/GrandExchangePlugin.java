@@ -70,8 +70,6 @@ import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetID;
 import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.Notifier;
-import net.runelite.client.account.AccountSession;
-import net.runelite.client.account.SessionManager;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
@@ -87,8 +85,6 @@ import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.StackFormatter;
 import net.runelite.client.util.Text;
-import net.runelite.http.api.ge.GrandExchangeClient;
-import net.runelite.http.api.ge.GrandExchangeTrade;
 import net.runelite.http.api.osbuddy.OSBGrandExchangeClient;
 
 @PluginDescriptor(
@@ -153,9 +149,6 @@ public class GrandExchangePlugin extends Plugin
 	private ScheduledExecutorService executorService;
 
 	@Inject
-	private SessionManager sessionManager;
-
-	@Inject
 	private ConfigManager configManager;
 
 	@Inject
@@ -165,8 +158,6 @@ public class GrandExchangePlugin extends Plugin
 	private Widget grandExchangeOfferType;
 	private Widget grandExchangeItem;
 	private Map<Integer, Integer> itemGELimits;
-
-	private GrandExchangeClient grandExchangeClient;
 
 	private int coins = 0;
 	private boolean quickLookup;
@@ -235,12 +226,6 @@ public class GrandExchangePlugin extends Plugin
 			mouseManager.registerMouseListener(inputListener);
 			keyManager.registerKeyListener(inputListener);
 		}
-
-		AccountSession accountSession = sessionManager.getAccountSession();
-		if (accountSession != null)
-		{
-			grandExchangeClient = new GrandExchangeClient(accountSession.getUuid());
-		}
 	}
 
 	@Override
@@ -255,7 +240,6 @@ public class GrandExchangePlugin extends Plugin
 		grandExchangeItem = null;
 		grandExchangeOfferType = null;
 		itemGELimits = null;
-		grandExchangeClient = null;
 	}
 
 	private void addSubscriptions()
@@ -263,27 +247,12 @@ public class GrandExchangePlugin extends Plugin
 		eventBus.subscribe(ConfigChanged.class, this, this::onConfigChanged);
 		eventBus.subscribe(GameTick.class, this, this::onGameTick);
 		eventBus.subscribe(ChatMessage.class, this, this::onChatMessage);
-		eventBus.subscribe(SessionOpen.class, this, this::onSessionOpen);
-		eventBus.subscribe(SessionClose.class, this, this::onSessionClose);
 		eventBus.subscribe(GrandExchangeOfferChanged.class, this, this::onGrandExchangeOfferChanged);
 		eventBus.subscribe(GameStateChanged.class, this, this::onGameStateChanged);
 		eventBus.subscribe(MenuEntryAdded.class, this, this::onMenuEntryAdded);
 		eventBus.subscribe(FocusChanged.class, this, this::onFocusChanged);
 		eventBus.subscribe(WidgetLoaded.class, this, this::onWidgetLoaded);
 		eventBus.subscribe(ScriptCallbackEvent.class, this, this::onScriptCallbackEvent);
-	}
-
-	private void onSessionOpen(SessionOpen sessionOpen)
-	{
-		AccountSession accountSession = sessionManager.getAccountSession();
-		if (accountSession.getUuid() != null)
-		{
-			grandExchangeClient = new GrandExchangeClient(accountSession.getUuid());
-		}
-		else
-		{
-			grandExchangeClient = null;
-		}
 	}
 
 	private void updateConfig()
@@ -293,11 +262,6 @@ public class GrandExchangePlugin extends Plugin
 		this.enableOsbPrices = config.enableOsbPrices();
 		this.enableGELimits = config.enableGELimits();
 		this.enableAfford = config.enableAfford();
-	}
-
-	private void onSessionClose(SessionClose sessionClose)
-	{
-		grandExchangeClient = null;
 	}
 
 	private void onConfigChanged(ConfigChanged event)
@@ -331,41 +295,7 @@ public class GrandExchangePlugin extends Plugin
 		BufferedImage itemImage = itemManager.getImage(offer.getItemId(), offer.getTotalQuantity(), shouldStack);
 		SwingUtilities.invokeLater(() -> panel.getOffersPanel().updateOffer(offerItem, itemImage, offer, slot));
 
-		submitTrades(slot, offer);
-
 		updateConfig(slot, offer);
-	}
-
-	private void submitTrades(int slot, GrandExchangeOffer offer)
-	{
-		if (grandExchangeClient == null)
-		{
-			return;
-		}
-
-		// Only interested in offers which are fully bought/sold
-		if (offer.getState() != GrandExchangeOfferState.BOUGHT && offer.getState() != GrandExchangeOfferState.SOLD)
-		{
-			return;
-		}
-
-		SavedOffer savedOffer = getOffer(slot);
-		if (!shouldUpdate(savedOffer, offer))
-		{
-			return;
-		}
-
-		// getPrice() is the price of the offer, not necessarily what the item bought at
-		int priceEach = offer.getSpent() / offer.getTotalQuantity();
-
-		GrandExchangeTrade grandExchangeTrade = new GrandExchangeTrade();
-		grandExchangeTrade.setBuy(offer.getState() == GrandExchangeOfferState.BOUGHT);
-		grandExchangeTrade.setItemId(offer.getItemId());
-		grandExchangeTrade.setQuantity(offer.getTotalQuantity());
-		grandExchangeTrade.setPrice(priceEach);
-
-		log.debug("Submitting trade: {}", grandExchangeTrade);
-		grandExchangeClient.submit(grandExchangeTrade);
 	}
 
 	private void updateConfig(int slot, GrandExchangeOffer offer)

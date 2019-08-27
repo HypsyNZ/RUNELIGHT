@@ -43,7 +43,7 @@ import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.ConfigChanged;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.client.Notifier;
-import net.runelite.client.RuneLiteProperties;
+import net.runelite.client.RuneLightProperties;
 import net.runelite.client.chat.ChatColorType;
 import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.config.ConfigManager;
@@ -180,7 +180,7 @@ public class ChatNotificationsPlugin extends Plugin
 				break;
 			case CONSOLE:
 				// Don't notify for notification messages
-				if (chatMessage.getName().equals(RuneLiteProperties.getTitle()))
+				if (chatMessage.getName().equals(RuneLightProperties.getTitle()))
 				{
 					return;
 				}

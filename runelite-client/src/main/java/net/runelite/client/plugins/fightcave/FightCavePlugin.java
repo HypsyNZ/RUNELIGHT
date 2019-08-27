@@ -26,39 +26,26 @@
 package net.runelite.client.plugins.fightcave;
 
 import com.google.inject.Provides;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.AnimationID;
-import net.runelite.api.ChatMessageType;
-import net.runelite.api.Client;
-import net.runelite.api.GameState;
-import net.runelite.api.NPC;
-import net.runelite.api.NpcID;
-import net.runelite.api.events.ChatMessage;
-import net.runelite.api.events.ConfigChanged;
-import net.runelite.api.events.GameStateChanged;
-import net.runelite.api.events.GameTick;
-import net.runelite.api.events.NpcDespawned;
-import net.runelite.api.events.NpcSpawned;
+import net.runelite.api.*;
+import net.runelite.api.events.*;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.game.NPCManager;
+import net.runelite.client.input.KeyManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.PluginType;
 import net.runelite.client.ui.overlay.OverlayManager;
 import org.apache.commons.lang3.ArrayUtils;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @PluginDescriptor(
 	name = "Fight Cave",
@@ -121,6 +108,10 @@ public class FightCavePlugin extends Plugin
 	@Inject
 	private Client client;
 	@Inject
+	private KeyManager keyManager;
+	@Inject
+	private FightCaveInputListener listener;
+	@Inject
 	private NPCManager npcManager;
 	@Inject
 	private OverlayManager overlayManager;
@@ -137,19 +128,25 @@ public class FightCavePlugin extends Plugin
 	@Getter(AccessLevel.PACKAGE)
 	private int currentWave = -1;
 	@Getter(AccessLevel.PACKAGE)
-	private boolean validRegion;
-	@Getter(AccessLevel.PACKAGE)
 	private List<Integer> mageTicks = new ArrayList<>();
 	@Getter(AccessLevel.PACKAGE)
 	private List<Integer> rangedTicks = new ArrayList<>();
 	@Getter(AccessLevel.PACKAGE)
 	private List<Integer> meleeTicks = new ArrayList<>();
+	@Getter(AccessLevel.PACKAGE)
+	private boolean running = false;
+	@Inject
+	private ConfigManager configManager;
 
 	static String formatMonsterQuantity(final WaveMonster monster, final int quantity)
 	{
 		return String.format("%dx %s", quantity, monster);
 	}
 
+	private boolean regionCheck()
+	{
+		return ArrayUtils.contains(client.getMapRegions(), FIGHT_CAVE_REGION);
+	}
 
 	@Getter(AccessLevel.PACKAGE)
 	private WaveDisplayMode waveDisplay;
@@ -174,12 +171,11 @@ public class FightCavePlugin extends Plugin
 		updateConfig();
 		addSubscriptions();
 
-		if (client.getGameState() == GameState.LOGGED_IN && regionCheck())
-		{
-			validRegion = true;
-			overlayManager.add(waveOverlay);
-			overlayManager.add(fightCaveOverlay);
-		}
+		keyManager.registerKeyListener(listener);
+		overlayManager.add(waveOverlay);
+		overlayManager.add(fightCaveOverlay);
+		configManager.setConfiguration("fightcave", "run", false);
+
 	}
 
 	@Override
@@ -187,8 +183,11 @@ public class FightCavePlugin extends Plugin
 	{
 		eventBus.unregister(this);
 
+		keyManager.unregisterKeyListener(listener);
 		overlayManager.remove(waveOverlay);
 		overlayManager.remove(fightCaveOverlay);
+		configManager.setConfiguration("fightcave", "run", false);
+
 		currentWave = -1;
 	}
 
@@ -214,7 +213,7 @@ public class FightCavePlugin extends Plugin
 
 	private void onChatMessage(ChatMessage event)
 	{
-		if (!validRegion)
+		if (!regionCheck())
 		{
 			return;
 		}
@@ -236,25 +235,12 @@ public class FightCavePlugin extends Plugin
 			return;
 		}
 
-		if (regionCheck())
-		{
-			validRegion = true;
-			overlayManager.add(waveOverlay);
-			overlayManager.add(fightCaveOverlay);
-		}
-		else
-		{
-			validRegion = false;
-			overlayManager.remove(fightCaveOverlay);
-			overlayManager.remove(fightCaveOverlay);
-		}
-
 		fightCaveContainer.clear();
 	}
 
 	private void onNpcSpawned(NpcSpawned event)
 	{
-		if (!validRegion)
+		if (!regionCheck())
 		{
 			return;
 		}
@@ -278,7 +264,7 @@ public class FightCavePlugin extends Plugin
 
 	private void onNpcDespawned(NpcDespawned event)
 	{
-		if (!validRegion)
+		if (!regionCheck())
 		{
 			return;
 		}
@@ -302,8 +288,9 @@ public class FightCavePlugin extends Plugin
 
 	private void onGameTick(GameTick Event)
 	{
-		if (!validRegion)
-		{
+		updateConfig();
+
+		if(!regionCheck()){
 			return;
 		}
 
@@ -375,11 +362,6 @@ public class FightCavePlugin extends Plugin
 		Collections.sort(meleeTicks);
 	}
 
-	private boolean regionCheck()
-	{
-		return ArrayUtils.contains(client.getMapRegions(), FIGHT_CAVE_REGION);
-	}
-
 	private void updateConfig()
 	{
 		this.waveDisplay = config.waveDisplay();
@@ -387,5 +369,6 @@ public class FightCavePlugin extends Plugin
 		this.fontStyle = config.fontStyle();
 		this.textSize = config.textSize();
 		this.shadows = config.shadows();
+		this.running = config.RunAltarBuiltIn();
 	}
 }

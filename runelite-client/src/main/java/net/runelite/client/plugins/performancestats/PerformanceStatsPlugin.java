@@ -61,11 +61,6 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.PluginType;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.Text;
-import net.runelite.client.ws.PartyMember;
-import net.runelite.client.ws.PartyService;
-import net.runelite.client.ws.WSClient;
-import net.runelite.http.api.ws.messages.party.UserPart;
-import net.runelite.http.api.ws.messages.party.UserSync;
 
 @PluginDescriptor(
 	name = "Performance Stats",
@@ -104,12 +99,6 @@ public class PerformanceStatsPlugin extends Plugin
 	private NPCManager npcManager;
 
 	@Inject
-	private PartyService partyService;
-
-	@Inject
-	private WSClient wsClient;
-
-	@Inject
 	private EventBus eventBus;
 
 	@Getter(AccessLevel.PACKAGE)
@@ -146,7 +135,6 @@ public class PerformanceStatsPlugin extends Plugin
 		this.submitTimeout = config.submitTimeout();
 
 		overlayManager.add(performanceTrackerOverlay);
-		wsClient.registerMessage(Performance.class);
 	}
 
 	@Override
@@ -155,7 +143,6 @@ public class PerformanceStatsPlugin extends Plugin
 		eventBus.unregister(this);
 
 		overlayManager.remove(performanceTrackerOverlay);
-		wsClient.unregisterMessage(Performance.class);
 		disable();
 		reset();
 	}
@@ -169,9 +156,6 @@ public class PerformanceStatsPlugin extends Plugin
 		eventBus.subscribe(ScriptCallbackEvent.class, this, this::onScriptCallbackEvent);
 		eventBus.subscribe(GameTick.class, this, this::onGameTick);
 		eventBus.subscribe(OverlayMenuClicked.class, this, this::onOverlayMenuClicked);
-		eventBus.subscribe(Performance.class, this, this::onPerformance);
-		eventBus.subscribe(UserSync.class, this, this::onUserSync);
-		eventBus.subscribe(UserPart.class, this, this::onUserPart);
 		eventBus.subscribe(PartyChanged.class, this, this::onPartyChanged);
 	}
 
@@ -309,7 +293,6 @@ public class PerformanceStatsPlugin extends Plugin
 
 		final String name = client.getLocalPlayer().getName();
 		performance.setUsername(Text.removeTags(name));
-		sendPerformance();
 	}
 
 	private void onOverlayMenuClicked(OverlayMenuClicked c)
@@ -433,34 +416,6 @@ public class PerformanceStatsPlugin extends Plugin
 			.append(ChatColorType.NORMAL)
 			.append(")")
 			.build();
-	}
-
-	private void sendPerformance()
-	{
-		final PartyMember me = partyService.getLocalMember();
-		if (me != null && me.getMemberId() != null)
-		{
-			performance.setMemberId(me.getMemberId());
-			wsClient.send(performance);
-		}
-	}
-
-	private void onPerformance(final Performance performance)
-	{
-		partyDataMap.put(performance.getMemberId(), performance);
-	}
-
-	private void onUserSync(final UserSync event)
-	{
-		if (isEnabled())
-		{
-			sendPerformance();
-		}
-	}
-
-	private void onUserPart(final UserPart event)
-	{
-		partyDataMap.remove(event.getMemberId());
 	}
 
 	private void onPartyChanged(final PartyChanged event)

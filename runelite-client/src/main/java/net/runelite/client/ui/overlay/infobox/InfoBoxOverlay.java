@@ -35,7 +35,7 @@ import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.api.Client;
-import net.runelite.client.config.RuneLiteConfig;
+import net.runelite.client.config.RuneLightConfig;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.components.ComponentOrientation;
@@ -52,14 +52,14 @@ public class InfoBoxOverlay extends Overlay
 	private final InfoBoxManager infoboxManager;
 	private final TooltipManager tooltipManager;
 	private final Client client;
-	private final RuneLiteConfig config;
+	private final RuneLightConfig config;
 
 	@Inject
 	private InfoBoxOverlay(
 		InfoBoxManager infoboxManager,
 		TooltipManager tooltipManager,
 		Client client,
-		RuneLiteConfig config)
+		RuneLightConfig config)
 	{
 		this.tooltipManager = tooltipManager;
 		this.infoboxManager = infoboxManager;

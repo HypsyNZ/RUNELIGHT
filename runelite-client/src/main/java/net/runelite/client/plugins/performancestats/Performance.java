@@ -27,10 +27,9 @@ package net.runelite.client.plugins.performancestats;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
-import net.runelite.http.api.ws.messages.party.PartyMemberMessage;
 
 @Getter(AccessLevel.PACKAGE)
-class Performance extends PartyMemberMessage
+class Performance
 {
 	private static final double TICK_LENGTH = 0.6;
 

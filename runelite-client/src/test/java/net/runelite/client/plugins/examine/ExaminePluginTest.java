@@ -39,7 +39,6 @@ import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.widgets.Widget;
 import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.game.ItemManager;
-import net.runelite.http.api.examine.ExamineClient;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -57,10 +56,6 @@ public class ExaminePluginTest
 {
 	@Inject
 	ExaminePlugin examinePlugin;
-
-	@Mock
-	@Bind
-	ExamineClient examineClient;
 
 	@Mock
 	@Bind
@@ -102,9 +97,6 @@ public class ExaminePluginTest
 
 		ChatMessage chatMessage = new ChatMessage(null, ChatMessageType.ITEM_EXAMINE, "", "A weapon from the abyss.", "", 0);
 		examinePlugin.onChatMessage(chatMessage);
-
-		// This passes due to not mocking the ItemDefinition for the whip
-		verify(examineClient).submitItem(anyInt(), anyString());
 	}
 
 	@Test
@@ -127,7 +119,5 @@ public class ExaminePluginTest
 
 		ChatMessage chatMessage = new ChatMessage(null, ChatMessageType.ITEM_EXAMINE, "", "100000 x Abyssal whip", "", 0);
 		examinePlugin.onChatMessage(chatMessage);
-
-		verify(examineClient, never()).submitItem(anyInt(), anyString());
 	}
 }

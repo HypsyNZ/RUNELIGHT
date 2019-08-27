@@ -76,13 +76,9 @@ import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.RuneLite;
-import net.runelite.client.RuneLiteProperties;
+import net.runelite.client.RuneLightProperties;
 import net.runelite.client.callback.ClientThread;
-import net.runelite.client.config.ConfigManager;
-import net.runelite.client.config.ExpandResizeType;
-import net.runelite.client.config.Keybind;
-import net.runelite.client.config.RuneLiteConfig;
-import net.runelite.client.config.WarningOnExit;
+import net.runelite.client.config.*;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.events.NavigationButtonAdded;
 import net.runelite.client.events.NavigationButtonRemoved;
@@ -107,7 +103,6 @@ import org.pushingpixels.substance.internal.utils.SubstanceTitlePaneUtilities;
 public class ClientUI
 {
 	private static final String CONFIG_GROUP = "runelite";
-	private static final String PLUS_CONFIG_GROUP = "runeliteplus";
 	private static final String CONFIG_CLIENT_BOUNDS = "clientBounds";
 	private static final String CONFIG_CLIENT_MAXIMIZED = "clientMaximized";
 	private static final String CONFIG_OPACITY = "enableOpacity";
@@ -120,7 +115,7 @@ public class ClientUI
 	@Getter
 	private TrayIcon trayIcon;
 
-	private final RuneLiteConfig config;
+	private final RuneLightConfig config;
 	private final KeyManager keyManager;
 	private final MouseManager mouseManager;
 	private final Applet client;
@@ -149,7 +144,7 @@ public class ClientUI
 
 	@Inject
 	private ClientUI(
-		RuneLiteConfig config,
+		RuneLightConfig config,
 		KeyManager keyManager,
 		MouseManager mouseManager,
 		@Nullable Applet client,
@@ -173,8 +168,7 @@ public class ClientUI
 	private void onConfigChanged(ConfigChanged event)
 	{
 		if (!event.getGroup().equals(CONFIG_GROUP)
-			&& !(event.getGroup().equals(PLUS_CONFIG_GROUP)
-			&& event.getKey().equals(CONFIG_OPACITY) ||
+			&& !(event.getKey().equals(CONFIG_OPACITY) ||
 			event.getKey().equals(CONFIG_OPACITY_AMOUNT)) ||
 			event.getKey().equals(CONFIG_CLIENT_MAXIMIZED) ||
 			event.getKey().equals(CONFIG_CLIENT_BOUNDS))
@@ -305,7 +299,7 @@ public class ClientUI
 				return false;
 			}
 
-			frame.setTitle(RuneLiteProperties.getTitle() + " - " + name);
+			frame.setTitle(RuneLightProperties.getTitle() + " - " + name);
 			return true;
 		});
 	}
@@ -327,7 +321,7 @@ public class ClientUI
 			// Try to enable fullscreen on OSX
 			OSXUtil.tryEnableFullscreen(frame);
 
-			frame.setTitle(RuneLiteProperties.getTitle());
+			frame.setTitle(RuneLightProperties.getTitle());
 			frame.setIconImage(ICON);
 			frame.getLayeredPane().setCursor(Cursor.getDefaultCursor()); // Prevent substance from using a resize cursor for pointing
 			frame.setLocationRelativeTo(frame.getOwner());
@@ -476,7 +470,7 @@ public class ClientUI
 			frame.revalidateMinimumSize();
 
 			// Create tray icon (needs to be created after frame is packed)
-			trayIcon = SwingUtil.createTrayIcon(ICON, RuneLiteProperties.getTitle(), frame);
+			trayIcon = SwingUtil.createTrayIcon(ICON, RuneLightProperties.getTitle(), frame);
 
 			// Move frame around (needs to be done after frame is packed)
 			if (config.rememberScreenBounds())
@@ -882,12 +876,12 @@ public class ClientUI
 
 			if (player != null && player.getName() != null)
 			{
-				frame.setTitle(RuneLiteProperties.getTitle() + " - " + player.getName());
+				frame.setTitle(RuneLightProperties.getTitle() + " - " + player.getName());
 			}
 		}
 		else
 		{
-			frame.setTitle(RuneLiteProperties.getTitle());
+			frame.setTitle(RuneLightProperties.getTitle());
 		}
 
 		if (frame.isAlwaysOnTopSupported())
@@ -917,7 +911,7 @@ public class ClientUI
 			configManager.unsetConfiguration(CONFIG_GROUP, CONFIG_CLIENT_BOUNDS);
 		}
 
-		if (configManager.getConfiguration(PLUS_CONFIG_GROUP, CONFIG_OPACITY, boolean.class))
+		if (configManager.getConfiguration(CONFIG_GROUP, CONFIG_OPACITY, boolean.class))
 		{
 			GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
 			GraphicsDevice gd = ge.getDefaultScreenDevice();
@@ -929,7 +923,7 @@ public class ClientUI
 			else
 			{
 				log.warn("Opacity isn't supported on your system!");
-				configManager.setConfiguration(PLUS_CONFIG_GROUP, CONFIG_OPACITY, false);
+				configManager.setConfiguration(CONFIG_GROUP, CONFIG_OPACITY, false);
 			}
 		}
 		else if (frame.getOpacity() != 1F)
@@ -1016,7 +1010,7 @@ public class ClientUI
 				}
 
 
-				final float opacity = Float.parseFloat(configManager.getConfiguration(PLUS_CONFIG_GROUP, CONFIG_OPACITY_AMOUNT)) / 100F;
+				final float opacity = Float.parseFloat(configManager.getConfiguration(CONFIG_GROUP, CONFIG_OPACITY_AMOUNT)) / 100F;
 				assert opacity > 0F && opacity <= 1F : "I don't know who you are, I don't know why you tried, and I don't know how you tried, but this is NOT what you're supposed to do and you should honestly feel terrible about what you did, so I want you to take a nice long amount of time to think about what you just tried to do so you are not gonna do this in the future.";
 
 				opacityField.setFloat(frame, opacity);

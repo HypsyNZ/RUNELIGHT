@@ -35,8 +35,8 @@ import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ChatColorConfig;
 import net.runelite.client.config.ConfigManager;
-import net.runelite.client.config.RuneLiteConfig;
-import net.runelite.client.config.RuneLitePlusConfig;
+import net.runelite.client.config.HelperConfig;
+import net.runelite.client.config.RuneLightConfig;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.events.OverlayMenuClicked;
 import net.runelite.client.events.PluginChanged;
@@ -73,10 +73,10 @@ public class ConfigPlugin extends Plugin
 	private ScheduledExecutorService executorService;
 
 	@Inject
-	private RuneLiteConfig runeLiteConfig;
+	private RuneLightConfig runeLiteConfig;
 
 	@Inject
-	private RuneLitePlusConfig runeLitePlusConfig;
+	private HelperConfig helperConfig;
 
 	@Inject
 	private ChatColorConfig chatColorConfig;
@@ -95,7 +95,7 @@ public class ConfigPlugin extends Plugin
 	{
 		addSubscriptions();
 
-		configPanel = new ConfigPanel(pluginManager, configManager, executorService, runeLiteConfig, runeLitePlusConfig, chatColorConfig, colorPickerManager);
+		configPanel = new ConfigPanel(pluginManager, configManager, executorService, runeLiteConfig, helperConfig, chatColorConfig, colorPickerManager);
 
 		final BufferedImage icon = ImageUtil.getResourceStreamFromClass(getClass(), "config_icon.png");
 

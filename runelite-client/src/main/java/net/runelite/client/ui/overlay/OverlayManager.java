@@ -45,7 +45,7 @@ import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.api.widgets.WidgetItem;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigManager;
-import net.runelite.client.config.RuneLiteConfig;
+import net.runelite.client.config.RuneLightConfig;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.events.OverlayMenuClicked;
 import net.runelite.client.events.PluginChanged;
@@ -61,7 +61,7 @@ public class OverlayManager
 	private static final String OVERLAY_CONFIG_PREFERRED_LOCATION = "_preferredLocation";
 	private static final String OVERLAY_CONFIG_PREFERRED_POSITION = "_preferredPosition";
 	private static final String OVERLAY_CONFIG_PREFERRED_SIZE = "_preferredSize";
-	private static final String RUNELITE_CONFIG_GROUP_NAME = RuneLiteConfig.class.getAnnotation(ConfigGroup.class).value();
+	private static final String RUNELITE_CONFIG_GROUP_NAME = RuneLightConfig.class.getAnnotation(ConfigGroup.class).value();
 
 	@VisibleForTesting
 	static final Comparator<Overlay> OVERLAY_COMPARATOR = (a, b) ->

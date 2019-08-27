@@ -55,7 +55,7 @@ import net.runelite.api.events.ConfigChanged;
 import net.runelite.api.events.FocusChanged;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetInfo;
-import net.runelite.client.config.RuneLiteConfig;
+import net.runelite.client.config.RuneLightConfig;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.input.KeyListener;
 import net.runelite.client.input.KeyManager;
@@ -79,7 +79,7 @@ public class OverlayRenderer extends MouseAdapter implements KeyListener
 	private static final Color MOVING_OVERLAY_ACTIVE_COLOR = new Color(255, 255, 0, 200);
 	private final Client client;
 	private final OverlayManager overlayManager;
-	private final RuneLiteConfig runeLiteConfig;
+	private final RuneLightConfig runeLiteConfig;
 
 	// Overlay movement variables
 	private final Point overlayOffset = new Point();
@@ -105,7 +105,7 @@ public class OverlayRenderer extends MouseAdapter implements KeyListener
 	private OverlayRenderer(
 		final Client client,
 		final OverlayManager overlayManager,
-		final RuneLiteConfig runeLiteConfig,
+		final RuneLightConfig runeLiteConfig,
 		final MouseManager mouseManager,
 		final KeyManager keyManager,
 		final EventBus eventbus)

@@ -79,21 +79,7 @@ import javax.swing.event.DocumentListener;
 import javax.swing.plaf.basic.BasicSpinnerUI;
 import javax.swing.text.JTextComponent;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.client.config.ChatColorConfig;
-import net.runelite.client.config.Config;
-import net.runelite.client.config.ConfigDescriptor;
-import net.runelite.client.config.ConfigGroup;
-import net.runelite.client.config.ConfigItem;
-import net.runelite.client.config.ConfigItemDescriptor;
-import net.runelite.client.config.ConfigItemsGroup;
-import net.runelite.client.config.ConfigManager;
-import net.runelite.client.config.ConfigPanelItem;
-import net.runelite.client.config.Keybind;
-import net.runelite.client.config.ModifierlessKeybind;
-import net.runelite.client.config.Range;
-import net.runelite.client.config.RuneLiteConfig;
-import net.runelite.client.config.RuneLitePlusConfig;
-import net.runelite.client.config.Stub;
+import net.runelite.client.config.*;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.PluginInstantiationException;
@@ -123,16 +109,16 @@ public class ConfigPanel extends PluginPanel
 	private static final ImageIcon BACK_ICON;
 	private static final ImageIcon BACK_ICON_HOVER;
 
-	private static final String RUNELITE_GROUP_NAME = RuneLiteConfig.class.getAnnotation(ConfigGroup.class).value();
+	private static final String RUNELITE_GROUP_NAME = RuneLightConfig.class.getAnnotation(ConfigGroup.class).value();
 	private static final String PINNED_PLUGINS_CONFIG_KEY = "pinnedPlugins";
-	private static final String RUNELITE_PLUGIN = "RuneLite";
-	private static final String RUNELITEPLUS_PLUGIN = "RuneLitePlus";
+	private static final String RUNELIGHT = "Rune Light";
+	private static final String INFINITY = "Infinity Helper";
 	private static final String CHAT_COLOR_PLUGIN = "Chat Color";
 	private final PluginManager pluginManager;
 	private final ConfigManager configManager;
 	private final ScheduledExecutorService executorService;
-	private final RuneLiteConfig runeLiteConfig;
-	private final RuneLitePlusConfig runeLitePlusConfig;
+	private final RuneLightConfig runeLiteConfig;
+	private final HelperConfig helperConfig;
 	private final ChatColorConfig chatColorConfig;
 	private final ColorPickerManager colorPickerManager;
 	public static List<PluginListItem> pluginList = new ArrayList<>();
@@ -153,7 +139,7 @@ public class ConfigPanel extends PluginPanel
 	}
 
 	ConfigPanel(PluginManager pluginManager, ConfigManager configManager, ScheduledExecutorService executorService,
-				RuneLiteConfig runeLiteConfig, RuneLitePlusConfig runeLitePlusConfig, ChatColorConfig chatColorConfig,
+				RuneLightConfig runeLiteConfig, HelperConfig helperConfig, ChatColorConfig chatColorConfig,
 				ColorPickerManager colorPickerManager)
 	{
 		super(false);
@@ -161,7 +147,7 @@ public class ConfigPanel extends PluginPanel
 		this.configManager = configManager;
 		this.executorService = executorService;
 		this.runeLiteConfig = runeLiteConfig;
-		this.runeLitePlusConfig = runeLitePlusConfig;
+		this.helperConfig = helperConfig;
 		this.chatColorConfig = chatColorConfig;
 		this.colorPickerManager = colorPickerManager;
 
@@ -258,24 +244,22 @@ public class ConfigPanel extends PluginPanel
 	{
 		final List<String> pinnedPlugins = getPinnedPluginNames();
 
-		// set RuneLite config on top, as it should always have been
 		final PluginListItem runeLite = new PluginListItem(this, configManager, runeLiteConfig,
 			configManager.getConfigDescriptor(runeLiteConfig),
-			RUNELITE_PLUGIN, "RuneLite client settings", "client");
-		runeLite.setPinned(pinnedPlugins.contains(RUNELITE_PLUGIN));
+				RUNELIGHT, "Rune Light Client Settings", "client");
+		runeLite.setPinned(pinnedPlugins.contains(RUNELIGHT));
 		runeLite.nameLabel.setForeground(Color.WHITE);
 		pluginList.add(runeLite);
 
-		// set RuneLitePlus config on top, as it should always have been
-		final PluginListItem runeLitePlus = new PluginListItem(this, configManager, runeLitePlusConfig,
-			configManager.getConfigDescriptor(runeLitePlusConfig),
-			RUNELITEPLUS_PLUGIN, "RuneLitePlus client settings", "client");
-		runeLitePlus.setPinned(pinnedPlugins.contains(RUNELITEPLUS_PLUGIN));
+		final PluginListItem runeLitePlus = new PluginListItem(this, configManager, helperConfig,
+			configManager.getConfigDescriptor(helperConfig),
+				INFINITY, "Infinity Helper Config", "client");
+		runeLitePlus.setPinned(pinnedPlugins.contains(INFINITY));
 		runeLitePlus.nameLabel.setForeground(Color.WHITE);
 		pluginList.add(runeLitePlus);
 
 		List<PluginListItem> externalPlugins = new ArrayList<>();
-		// populate pluginList with all external Plugins
+
 		pluginManager.getPlugins().stream()
 			.filter(plugin -> plugin.getClass().getAnnotation(PluginDescriptor.class).type().equals(PluginType.EXTERNAL))
 			.forEach(plugin ->

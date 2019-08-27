@@ -80,7 +80,6 @@ import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.Notifier;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.chat.ChatColorType;
-import net.runelite.client.chat.ChatCommandManager;
 import net.runelite.client.chat.ChatMessageBuilder;
 import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.config.ConfigManager;
@@ -101,7 +100,6 @@ import net.runelite.client.ui.overlay.infobox.InfoBoxManager;
 import net.runelite.client.util.ColorUtil;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
-import net.runelite.http.api.chat.ChatClient;
 
 @PluginDescriptor(
 	name = "Slayer",
@@ -215,13 +213,7 @@ public class SlayerPlugin extends Plugin
 	private ChatMessageManager chatMessageManager;
 
 	@Inject
-	private ChatCommandManager chatCommandManager;
-
-	@Inject
 	private ScheduledExecutorService executor;
-
-	@Inject
-	private ChatClient chatClient;
 
 	@Inject
 	private EventBus eventBus;
@@ -333,10 +325,6 @@ public class SlayerPlugin extends Plugin
 		{
 			cachedXp = client.getSkillExperience(SLAYER);
 		}
-
-		chatCommandManager.registerCommandAsync(TASK_COMMAND_STRING, this::taskLookup, this::taskSubmit);
-
-		chatCommandManager.registerCommandAsync(POINTS_COMMAND_STRING, this::pointsLookup); //here
 	}
 
 	@Override
@@ -351,8 +339,6 @@ public class SlayerPlugin extends Plugin
 		removeCounter();
 		clearTrackedNPCs();
 
-		chatCommandManager.unregisterCommand(TASK_COMMAND_STRING);
-		chatCommandManager.unregisterCommand(POINTS_COMMAND_STRING);
 		clientToolbar.removeNavigation(navButton);
 
 		cachedXp = -1;
@@ -1124,119 +1110,6 @@ public class SlayerPlugin extends Plugin
 		counter = null;
 	}
 
-	void taskLookup(ChatMessage chatMessage, String message)
-	{
-		if (!this.taskCommand)
-		{
-			return;
-		}
-
-		ChatMessageType type = chatMessage.getType();
-
-		final String player;
-		if (type.equals(ChatMessageType.PRIVATECHATOUT))
-		{
-			player = client.getLocalPlayer().getName();
-		}
-		else
-		{
-			player = Text.removeTags(chatMessage.getName())
-				.replace('\u00A0', ' ');
-		}
-
-		net.runelite.http.api.chat.Task task;
-		try
-		{
-			task = chatClient.getTask(player);
-		}
-		catch (IOException ex)
-		{
-			log.debug("unable to lookup slayer task", ex);
-			return;
-		}
-
-		if (task == null)
-		{
-			return;
-		}
-
-		if (TASK_STRING_VALIDATION.matcher(task.getTask()).find() || task.getTask().length() > TASK_STRING_MAX_LENGTH ||
-			TASK_STRING_VALIDATION.matcher(task.getLocation()).find() || task.getLocation().length() > TASK_STRING_MAX_LENGTH ||
-			Task.getTask(task.getTask()) == null || !Task.LOCATIONS.contains(task.getLocation()))
-		{
-			log.debug("Validation failed for task name or location: {}", task);
-			return;
-		}
-
-		int killed = task.getInitialAmount() - task.getAmount();
-
-		StringBuilder sb = new StringBuilder();
-		sb.append(task.getTask());
-		if (!Strings.isNullOrEmpty(task.getLocation()))
-		{
-			sb.append(" (").append(task.getLocation()).append(")");
-		}
-		sb.append(": ");
-		if (killed < 0)
-		{
-			sb.append(task.getAmount()).append(" left");
-		}
-		else
-		{
-			sb.append(killed).append('/').append(task.getInitialAmount()).append(" killed");
-		}
-
-		String response = new ChatMessageBuilder()
-			.append(ChatColorType.NORMAL)
-			.append("Slayer Task: ")
-			.append(ChatColorType.HIGHLIGHT)
-			.append(sb.toString())
-			.build();
-
-		final MessageNode messageNode = chatMessage.getMessageNode();
-		messageNode.setRuneLiteFormatMessage(response);
-		chatMessageManager.update(messageNode);
-		client.refreshChat();
-	}
-
-	void pointsLookup(ChatMessage chatMessage, String message)
-	{
-		if (!this.pointsCommand)
-		{
-			return;
-		}
-
-		ChatMessageType type = chatMessage.getType();
-
-		final String player;
-		if (type.equals(ChatMessageType.PRIVATECHATOUT))
-		{
-			player = client.getLocalPlayer().getName();
-		}
-		else
-		{
-			player = Text.removeTags(chatMessage.getName())
-				.replace('\u00A0', ' ');
-		}
-
-		if (Integer.toString(getPoints()) == null)
-		{
-			return;
-		}
-
-		String response = new ChatMessageBuilder()
-			.append(ChatColorType.NORMAL)
-			.append("Slayer Points: ")
-			.append(ChatColorType.HIGHLIGHT)
-			.append(Integer.toString(getPoints()))
-			.build();
-
-		final MessageNode messageNode = chatMessage.getMessageNode();
-		messageNode.setRuneLiteFormatMessage(response);
-		chatMessageManager.update(messageNode);
-		client.refreshChat();
-	}
-
 	/* package access method for changing the pause state of the time tracker for the current task */
 	void setPaused(boolean paused)
 	{
@@ -1268,34 +1141,6 @@ public class SlayerPlugin extends Plugin
 		currentTask.tick(tickDelta);
 
 		panel.updateCurrentTask(false, currentTask.isPaused(), currentTask, false);
-	}
-
-	private boolean taskSubmit(ChatInput chatInput, String value)
-	{
-		if (Strings.isNullOrEmpty(currentTask.getTaskName()))
-		{
-			return false;
-		}
-
-		final String playerName = client.getLocalPlayer().getName();
-
-		executor.execute(() ->
-		{
-			try
-			{
-				chatClient.submitTask(playerName, capsString(currentTask.getTaskName()), currentTask.getAmount(), currentTask.getInitialAmount(), currentTask.getTaskLocation());
-			}
-			catch (Exception ex)
-			{
-				log.warn("unable to submit slayer task", ex);
-			}
-			finally
-			{
-				chatInput.resume();
-			}
-		});
-
-		return true;
 	}
 
 	//Utils

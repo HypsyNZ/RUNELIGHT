@@ -34,13 +34,13 @@ import com.google.common.collect.Multisets;
 import com.google.gson.reflect.TypeToken;
 import com.google.inject.Provides;
 import java.awt.image.BufferedImage;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.sql.Timestamp;
+import java.nio.file.Files;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -51,7 +51,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -59,8 +58,6 @@ import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.swing.SwingUtilities;
-import lombok.AccessLevel;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
@@ -86,24 +83,15 @@ import net.runelite.api.events.WidgetLoaded;
 import net.runelite.api.widgets.WidgetID;
 import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.RuneLite;
-import net.runelite.client.account.AccountSession;
-import net.runelite.client.account.SessionManager;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.chat.ChatColorType;
 import net.runelite.client.chat.ChatMessageBuilder;
 import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
-import net.runelite.client.database.DatabaseManager;
-import static net.runelite.client.database.data.Tables.LOOTTRACKEREVENTS;
-import static net.runelite.client.database.data.Tables.LOOTTRACKERLINK;
-import static net.runelite.client.database.data.Tables.LOOTTRACKERLOOT;
-import static net.runelite.client.database.data.Tables.USER;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.events.NpcLootReceived;
 import net.runelite.client.events.PlayerLootReceived;
-import net.runelite.client.events.SessionClose;
-import net.runelite.client.events.SessionOpen;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.ItemStack;
 import net.runelite.client.game.SpriteManager;
@@ -112,7 +100,6 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.loottracker.localstorage.LTItemEntry;
 import net.runelite.client.plugins.loottracker.localstorage.LTRecord;
 import net.runelite.client.plugins.loottracker.localstorage.LootRecordWriter;
-import net.runelite.client.task.Schedule;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.util.ImageUtil;
@@ -122,15 +109,7 @@ import net.runelite.http.api.RuneLiteAPI;
 import net.runelite.http.api.loottracker.GameItem;
 import net.runelite.http.api.loottracker.LootRecord;
 import net.runelite.http.api.loottracker.LootRecordType;
-import net.runelite.http.api.loottracker.LootTrackerClient;
 import org.apache.commons.lang3.ArrayUtils;
-import org.jooq.DSLContext;
-import org.jooq.Record;
-import org.jooq.Record1;
-import org.jooq.Record2;
-import org.jooq.Result;
-import static org.jooq.impl.DSL.constraint;
-import org.jooq.impl.SQLDataType;
 
 @PluginDescriptor(
 	name = "Loot Tracker",
@@ -215,15 +194,11 @@ public class LootTrackerPlugin extends Plugin
 	@Inject
 	private ClientThread clientThread;
 	@Inject
-	private SessionManager sessionManager;
-	@Inject
 	private ScheduledExecutorService executor;
 	@Inject
 	private EventBus eventBus;
 	@Inject
 	private LootRecordWriter writer;
-	@Inject
-	private DatabaseManager databaseManager;
 	private LootTrackerPanel panel;
 	private NavigationButton navButton;
 	private String eventType;
@@ -232,13 +207,8 @@ public class LootTrackerPlugin extends Plugin
 	private List<String> ignoredItems = new ArrayList<>();
 	private List<String> ignoredNPCs = new ArrayList<>();
 	private Multiset<Integer> inventorySnapshot;
-	@Getter(AccessLevel.PACKAGE)
-	private LootTrackerClient lootTrackerClient;
-	private final List<LootRecord> queuedLoots = new ArrayList<>();
-
 	private Map<String, Integer> killCountMap = new HashMap<>();
 	private boolean gotPet = false;
-	private Map<String, UUID> userUuidMap = new HashMap<>();
 
 	private static Collection<ItemStack> stack(Collection<ItemStack> items)
 	{
@@ -279,8 +249,6 @@ public class LootTrackerPlugin extends Plugin
 	private String getIgnoredItems;
 	private boolean saveLoot;
 	private boolean chestLootChat;
-	private boolean syncPanel;
-	private boolean localPersistence;
 	private LootRecordSortType sortType;
 	private boolean whitelistEnabled;
 	private String getWhitelist;
@@ -292,25 +260,6 @@ public class LootTrackerPlugin extends Plugin
 	LootTrackerConfig provideConfig(ConfigManager configManager)
 	{
 		return configManager.getConfig(LootTrackerConfig.class);
-	}
-
-	private void onSessionOpen(SessionOpen sessionOpen)
-	{
-		AccountSession accountSession = sessionManager.getAccountSession();
-		if (accountSession.getUuid() != null)
-		{
-			lootTrackerClient = new LootTrackerClient(accountSession.getUuid());
-		}
-		else
-		{
-			lootTrackerClient = null;
-		}
-	}
-
-	private void onSessionClose(SessionClose sessionClose)
-	{
-		submitLoot();
-		lootTrackerClient = null;
 	}
 
 	private void onLocalPlayerDeath(LocalPlayerDeath event)
@@ -350,7 +299,7 @@ public class LootTrackerPlugin extends Plugin
 	@Override
 	protected void startUp() throws Exception
 	{
-		initDatabase();
+
 		addSubscriptions();
 
 		ignoredItems = Text.fromCSV(config.getIgnoredItems());
@@ -370,9 +319,9 @@ public class LootTrackerPlugin extends Plugin
 
 		clientToolbar.addNavigation(navButton);
 
-		AccountSession accountSession = sessionManager.getAccountSession();
-		if (accountSession != null || this.localPersistence)
-		{
+		LOOT_RECORDS_FILE.createNewFile();
+		// BufferedReader bufferedReader = Files.newBufferedReader(LOOT_RECORDS_FILE.toPath());
+
 
 			clientThread.invokeLater(() ->
 			{
@@ -385,80 +334,23 @@ public class LootTrackerPlugin extends Plugin
 
 				executor.submit(() ->
 				{
-					if (this.syncPanel && lootTrackerClient != null)
-					{
-						if (accountSession != null)
-						{
-							lootTrackerClient = new LootTrackerClient(accountSession.getUuid());
-						}
+
 						try
 						{
-							lootRecords = lootTrackerClient.get();
+							lootRecords.addAll(RuneLiteAPI.GSON.fromJson(new FileReader(LOOT_RECORDS_FILE),
+								new TypeToken<ArrayList<LootRecord>>()
+								{
+								}.getType()));
 						}
-						catch (IOException e)
+						catch (IOException | NullPointerException e)
 						{
-							log.debug("Unable to look up loot", e);
-							return;
+							log.info("Couldn't load any locally stored loots.");
 						}
-						log.info("Loaded {} remote data entries", lootRecords.size());
-					}
-
-					if (this.localPersistence)
-					{
-						DSLContext dslContext = databaseManager.getDsl();
-
-						Result<Record> records = dslContext
-							.selectDistinct(
-								LOOTTRACKEREVENTS.UNIQUEID
-							).select(
-								LOOTTRACKEREVENTS.EVENTID,
-								LOOTTRACKEREVENTS.TYPE,
-								LOOTTRACKEREVENTS.TIME,
-								USER.USERNAME
-							)
-							.from(LOOTTRACKEREVENTS)
-							.join(LOOTTRACKERLINK).on(LOOTTRACKERLINK.EVENTUNIQUEID.eq(LOOTTRACKEREVENTS.UNIQUEID))
-							.join(USER).on(LOOTTRACKERLINK.USERUNIQUEID.eq(USER.UNIQUEID))
-							.fetch();
-
-						for (Record record : records)
-						{
-							Result<Record2<Integer, Integer>> drops = dslContext
-								.select(
-									LOOTTRACKERLOOT.ITEMID,
-									LOOTTRACKERLOOT.QUANTITY
-								)
-								.from(LOOTTRACKERLOOT)
-								.join(LOOTTRACKERLINK).on(LOOTTRACKERLOOT.UNIQUEID.eq(LOOTTRACKERLINK.DROPUNIQUEID))
-								.where(LOOTTRACKERLINK.EVENTUNIQUEID.eq(record.getValue(LOOTTRACKEREVENTS.UNIQUEID)))
-								.fetch();
-
-							final List<GameItem> gameItems = new ArrayList<>();
-
-							for (Record drop : drops)
-							{
-								GameItem gameItem = new GameItem();
-								gameItem.setId(drop.getValue(LOOTTRACKERLOOT.ITEMID));
-								gameItem.setQty(drop.getValue(LOOTTRACKERLOOT.QUANTITY));
-
-								gameItems.add(gameItem);
-							}
-
-							LootRecord lootRecord = new LootRecord();
-							lootRecord.setEventId(record.getValue(LOOTTRACKEREVENTS.EVENTID));
-							lootRecord.setUsername(record.getValue(USER.USERNAME));
-							lootRecord.setType(record.getValue(LOOTTRACKEREVENTS.TYPE, LootRecordType.class));
-							lootRecord.setDrops(gameItems);
-							lootRecord.setTime(record.getValue(LOOTTRACKEREVENTS.TIME).toInstant());
-
-							lootRecords.add(lootRecord);
-						}
-
 						if (lootRecords.size() > 0)
 						{
 							log.info("Loaded {} locally stored loot records", lootRecords.size());
 						}
-					}
+
 
 					Collection<LootRecord> finalLootRecords = lootRecords;
 					clientThread.invokeLater(() ->
@@ -469,17 +361,14 @@ public class LootTrackerPlugin extends Plugin
 				});
 				return true;
 			});
-		}
 	}
 
 	@Override
 	protected void shutDown()
 	{
 		eventBus.unregister(this);
-		submitLoot();
 
 		clientToolbar.removeNavigation(navButton);
-		lootTrackerClient = null;
 		lootRecords = new ArrayList<>();
 		chestLooted = false;
 	}
@@ -487,8 +376,6 @@ public class LootTrackerPlugin extends Plugin
 	private void addSubscriptions()
 	{
 		eventBus.subscribe(ConfigChanged.class, this, this::onConfigChanged);
-		eventBus.subscribe(SessionOpen.class, this, this::onSessionOpen);
-		eventBus.subscribe(SessionClose.class, this, this::onSessionClose);
 		eventBus.subscribe(LocalPlayerDeath.class, this, this::onLocalPlayerDeath);
 		eventBus.subscribe(GameStateChanged.class, this, this::onGameStateChanged);
 		eventBus.subscribe(NpcLootReceived.class, this, this::onNpcLootReceived);
@@ -527,8 +414,6 @@ public class LootTrackerPlugin extends Plugin
 				if (name != null)
 				{
 					writer.setPlayerUsername(name);
-					userUuid(name);
-
 					return true;
 				}
 				else
@@ -585,18 +470,7 @@ public class LootTrackerPlugin extends Plugin
 		SwingUtilities.invokeLater(() -> panel.add(name, localUsername, combat, entries));
 		LootRecord lootRecord = new LootRecord(name, localUsername, LootRecordType.NPC,
 			toGameItems(items), Instant.now());
-
-		if (config.saveLoot())
-		{
-			synchronized (queuedLoots)
-			{
-				queuedLoots.add(lootRecord);
-			}
-		}
-		if (this.localPersistence)
-		{
 			saveLocalLootRecord(lootRecord);
-		}
 
 		LTRecord record = new LTRecord(npc.getId(), npc.getName(), combat, killCount, convertToLTItemEntries(items));
 		writer.addLootTrackerRecord(record);
@@ -639,17 +513,8 @@ public class LootTrackerPlugin extends Plugin
 		SwingUtilities.invokeLater(() -> panel.add(name, localUsername, combat, entries));
 		LootRecord lootRecord = new LootRecord(name, localUsername, LootRecordType.PLAYER,
 			toGameItems(items), Instant.now());
-		if (this.saveLoot)
-		{
-			synchronized (queuedLoots)
-			{
-				queuedLoots.add(lootRecord);
-			}
-		}
-		if (config.localPersistence())
-		{
 			saveLocalLootRecord(lootRecord);
-		}
+
 
 		LTRecord record = new LTRecord(-1, name, combat, -1, convertToLTItemEntries(items));
 		writer.addLootTrackerRecord(record);
@@ -749,23 +614,13 @@ public class LootTrackerPlugin extends Plugin
 
 		final LootTrackerItem[] entries = buildEntries(stack(items));
 
-		final int killCount = killCountMap.getOrDefault(eventType.toUpperCase(), -1);
-
 		SwingUtilities.invokeLater(() -> panel.add(eventType, client.getLocalPlayer().getName(), -1, entries));
 		LootRecord lootRecord = new LootRecord(eventType, client.getLocalPlayer().getName(), LootRecordType.EVENT,
 			toGameItems(items), Instant.now());
 
-		if (this.saveLoot)
-		{
-			synchronized (queuedLoots)
-			{
-				queuedLoots.add(lootRecord);
-			}
-		}
-		if (config.localPersistence())
-		{
+		final int killCount = killCountMap.getOrDefault(eventType.toUpperCase(), -1);
 			saveLocalLootRecord(lootRecord);
-		}
+
 
 		LTRecord record = new LTRecord(-1, eventType, -1, killCount, convertToLTItemEntries(items));
 		writer.addLootTrackerRecord(record);
@@ -938,17 +793,8 @@ public class LootTrackerPlugin extends Plugin
 						client.getLocalPlayer().getCombatLevel(), entries));
 					LootRecord lootRecord = new LootRecord(name, client.getLocalPlayer().getName(), LootRecordType.DEATH,
 						toGameItems(itemsLost), Instant.now());
-					if (this.saveLoot)
-					{
-						synchronized (queuedLoots)
-						{
-							queuedLoots.add(lootRecord);
-						}
-					}
-					if (this.localPersistence)
-					{
+
 						saveLocalLootRecord(lootRecord);
-					}
 
 					pvpDeath = false;
 					inventorySnapshot = null;
@@ -999,16 +845,42 @@ public class LootTrackerPlugin extends Plugin
 	private void saveLocalLootRecord(LootRecord lootRecord)
 	{
 		lootRecords.add(lootRecord);
-		addLootRecord(databaseManager.getDsl(), lootRecord);
+		try
+		{
+			BufferedWriter bufferedWriter = Files.newBufferedWriter(LOOT_RECORDS_FILE.toPath());
+
+			bufferedWriter.append(RuneLiteAPI.GSON.toJson(lootRecords));
+			bufferedWriter.close();
+		}
+		catch (IOException e)
+		{
+			if (e instanceof FileNotFoundException)
+			{
+				try
+				{
+					LOOT_RECORDS_FILE.createNewFile();
+				}
+				catch (IOException ex)
+				{
+					ex.printStackTrace();
+				}
+			}
+			e.printStackTrace();
+		}
 	}
 
 	void deleteLocalRecords()
 	{
-		lootRecords.clear();
-		DSLContext dslContext = databaseManager.getDsl();
-		dslContext.delete(LOOTTRACKEREVENTS).execute();
-		dslContext.delete(LOOTTRACKERLOOT).execute();
-		dslContext.delete(LOOTTRACKERLINK).execute();
+		try
+		{
+			lootRecords.clear();
+			Files.deleteIfExists(LOOT_RECORDS_FILE.toPath());
+		}
+		catch (IOException e)
+		{
+			log.error("Error deleting local loot records file.");
+			log.error(Arrays.toString(e.getStackTrace()));
+		}
 	}
 
 	/**
@@ -1031,40 +903,6 @@ public class LootTrackerPlugin extends Plugin
 			Arrays.stream(equipment.getItems())
 				.forEach(item -> inventorySnapshot.add(item.getId(), item.getQuantity()));
 		}
-	}
-
-	@Schedule(
-		period = 5,
-		unit = ChronoUnit.MINUTES,
-		asynchronous = true
-	)
-	public void submitLootTask()
-	{
-		submitLoot();
-	}
-
-	private void submitLoot()
-	{
-		List<LootRecord> copy;
-		synchronized (queuedLoots)
-		{
-			if (queuedLoots.isEmpty())
-			{
-				return;
-			}
-
-			copy = new ArrayList<>(queuedLoots);
-			queuedLoots.clear();
-		}
-
-		if (lootTrackerClient == null || !config.saveLoot())
-		{
-			return;
-		}
-
-		log.debug("Submitting {} loot records", copy.size());
-
-		lootTrackerClient.submit(copy);
 	}
 
 	private void takeInventorySnapshot()
@@ -1123,18 +961,8 @@ public class LootTrackerPlugin extends Plugin
 
 			LootRecord lootRecord = new LootRecord(chestType, client.getLocalPlayer().getName(),
 				LootRecordType.EVENT, toGameItems(items), Instant.now());
-			if (config.saveLoot())
-			{
-				synchronized (queuedLoots)
-				{
-					queuedLoots.add(lootRecord);
-				}
-			}
-
-			if (config.localPersistence())
-			{
 				saveLocalLootRecord(lootRecord);
-			}
+
 
 			LTRecord record = new LTRecord(-1, chestType, -1, -1, convertToLTItemEntries(items));
 			writer.addLootTrackerRecord(record);
@@ -1304,191 +1132,11 @@ public class LootTrackerPlugin extends Plugin
 		this.getIgnoredItems = config.getIgnoredItems();
 		this.saveLoot = config.saveLoot();
 		this.chestLootChat = config.chestLootChat();
-		this.syncPanel = config.syncPanel();
-		this.localPersistence = config.localPersistence();
 		this.sortType = config.sortType();
 		this.whitelistEnabled = config.whitelistEnabled();
 		this.getWhitelist = config.getWhitelist();
 		this.blacklistEnabled = config.blacklistEnabled();
 		this.getBlacklist = config.getBlacklist();
 		this.sendLootValueMessages = config.sendLootValueMessages();
-	}
-
-	private void initDatabase()
-	{
-		boolean lootTrackerEvents = databaseManager.checkTableExists("LootTrackerEvents");
-		boolean lootTrackerLoot = databaseManager.checkTableExists("LootTrackerLoot");
-		boolean user = databaseManager.checkTableExists("User");
-		boolean lootTrackerLink = databaseManager.checkTableExists("LootTrackerLink");
-
-		if (!lootTrackerEvents)
-		{
-			databaseManager.getDsl().createTable(LOOTTRACKEREVENTS)
-				.column(LOOTTRACKEREVENTS.UNIQUEID, SQLDataType.UUID.nullable(false))
-				.column(LOOTTRACKEREVENTS.EVENTID, SQLDataType.VARCHAR.length(255).nullable(false))
-				.column(LOOTTRACKEREVENTS.TYPE, SQLDataType.VARCHAR.length(255).nullable(false))
-				.column(LOOTTRACKEREVENTS.TIME, SQLDataType.TIMESTAMP(0).nullable(false))
-				.constraints(
-					constraint("PK_LOOTTRACKEREVENTS").primaryKey(LOOTTRACKEREVENTS.UNIQUEID)
-				)
-				.execute();
-		}
-
-		if (!lootTrackerLoot)
-		{
-			databaseManager.getDsl().createTable(LOOTTRACKERLOOT)
-				.column(LOOTTRACKERLOOT.UNIQUEID, SQLDataType.UUID.nullable(false))
-				.column(LOOTTRACKERLOOT.ITEMID, SQLDataType.INTEGER.nullable(false))
-				.column(LOOTTRACKERLOOT.QUANTITY, SQLDataType.INTEGER.nullable(false))
-				.constraints(
-					constraint("PK_LOOTTRACKERDROPS").primaryKey(LOOTTRACKERLOOT.UNIQUEID)
-				)
-				.execute();
-		}
-
-		if (!user)
-		{
-			databaseManager.getDsl().createTable(USER)
-				.column(USER.UNIQUEID, SQLDataType.UUID.nullable(false))
-				.column(USER.USERNAME, SQLDataType.VARCHAR(12).nullable(false))
-				.constraints(
-					constraint("PK_USER").primaryKey(USER.UNIQUEID),
-					constraint("UN_USERNAME").unique(USER.USERNAME)
-				)
-				.execute();
-		}
-
-		if (!lootTrackerLink)
-		{
-			databaseManager.getDsl().createTable(LOOTTRACKERLINK)
-				.column(LOOTTRACKERLINK.LINKUNIQUEID, SQLDataType.UUID.nullable(false))
-				.column(LOOTTRACKERLINK.EVENTUNIQUEID, SQLDataType.UUID.nullable(false))
-				.column(LOOTTRACKERLINK.DROPUNIQUEID, SQLDataType.UUID.nullable(false))
-				.column(LOOTTRACKERLINK.USERUNIQUEID, SQLDataType.UUID.nullable(false))
-				.constraints(
-					constraint("FK_LOOTTRACKEREVENT").foreignKey(LOOTTRACKERLINK.EVENTUNIQUEID).references(LOOTTRACKEREVENTS, LOOTTRACKEREVENTS.UNIQUEID).onDeleteCascade().onUpdateCascade(),
-					constraint("FK_LOOTTRACKERDROP").foreignKey(LOOTTRACKERLINK.DROPUNIQUEID).references(LOOTTRACKERLOOT, LOOTTRACKERLOOT.UNIQUEID).onDeleteCascade().onUpdateCascade(),
-					constraint("FK_USER").foreignKey(LOOTTRACKERLINK.USERUNIQUEID).references(USER, USER.UNIQUEID).onDeleteCascade().onUpdateCascade()
-				)
-				.execute();
-		}
-
-		if (!lootTrackerEvents || !lootTrackerLoot || !lootTrackerLink || !user)
-		{
-			if (LOOT_RECORDS_FILE.exists())
-			{
-				migrateData();
-			}
-		}
-	}
-
-	private void migrateData()
-	{
-		try
-		{
-			Collection<LootRecord> lootRecords = new ArrayList<>(RuneLiteAPI.GSON.fromJson(new FileReader(LOOT_RECORDS_FILE),
-				new TypeToken<ArrayList<LootRecord>>()
-				{
-				}.getType()));
-
-			DSLContext dslContext = databaseManager.getDsl();
-
-
-			for (LootRecord lootRecord : lootRecords)
-			{
-				addLootRecord(dslContext, lootRecord);
-			}
-		}
-		catch (FileNotFoundException e)
-		{
-			e.printStackTrace();
-		}
-	}
-
-	private void addLootRecord(DSLContext dslContext, LootRecord lootRecord)
-	{
-		String username = lootRecord.getUsername();
-		userUuid(username);
-
-		UUID eventUuid = UUID.randomUUID();
-		dslContext
-			.insertInto(
-				LOOTTRACKEREVENTS,
-				LOOTTRACKEREVENTS.UNIQUEID,
-				LOOTTRACKEREVENTS.EVENTID,
-				LOOTTRACKEREVENTS.TYPE,
-				LOOTTRACKEREVENTS.TIME
-			)
-			.values(
-				eventUuid,
-				lootRecord.getEventId(),
-				lootRecord.getType().toString(),
-				Timestamp.from(lootRecord.getTime())
-			)
-			.execute();
-
-		for (GameItem item : lootRecord.getDrops())
-		{
-			UUID dropUuid = UUID.randomUUID();
-			dslContext.
-				insertInto(
-					LOOTTRACKERLOOT,
-					LOOTTRACKERLOOT.UNIQUEID,
-					LOOTTRACKERLOOT.ITEMID,
-					LOOTTRACKERLOOT.QUANTITY
-				)
-				.values(
-					dropUuid,
-					item.getId(),
-					item.getQty()
-				)
-				.execute();
-
-			dslContext
-				.insertInto(
-					LOOTTRACKERLINK,
-					LOOTTRACKERLINK.LINKUNIQUEID,
-					LOOTTRACKERLINK.EVENTUNIQUEID,
-					LOOTTRACKERLINK.DROPUNIQUEID,
-					LOOTTRACKERLINK.USERUNIQUEID
-				)
-				.values(
-					UUID.randomUUID(),
-					eventUuid,
-					dropUuid,
-					userUuidMap.get(username)
-				)
-				.execute();
-		}
-	}
-
-	private void userUuid(String name)
-	{
-		if (userUuidMap.get(name) == null)
-		{
-			DSLContext dslContext = databaseManager.getDsl();
-
-			dslContext
-				.insertInto(
-					USER,
-					USER.UNIQUEID,
-					USER.USERNAME
-				)
-				.values(
-					UUID.randomUUID(),
-					name
-				)
-				.onConflict(USER.USERNAME)
-				.doNothing()
-				.execute();
-
-			Record1<UUID> user = dslContext
-				.select(USER.UNIQUEID)
-				.from(USER)
-				.where(USER.USERNAME.eq(name))
-				.fetchOne();
-
-			userUuidMap.put(name, user.get(USER.UNIQUEID));
-		}
 	}
 }

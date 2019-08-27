@@ -33,7 +33,7 @@ import net.runelite.api.Client;
 import net.runelite.api.ItemDefinition;
 import net.runelite.api.ItemID;
 import net.runelite.client.callback.ClientThread;
-import net.runelite.client.config.RuneLiteConfig;
+import net.runelite.client.config.RuneLightConfig;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.SpriteManager;
 import net.runelite.client.game.chatbox.ChatboxPanelManager;
@@ -103,7 +103,7 @@ public class ItemValueSearchTest
 
 	@Mock
 	@Bind
-	private RuneLiteConfig runeLiteConfig;
+	private RuneLightConfig runeLiteConfig;
 
 	@Before
 	public void before()

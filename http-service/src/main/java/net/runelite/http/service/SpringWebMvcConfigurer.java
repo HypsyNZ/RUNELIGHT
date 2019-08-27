@@ -37,8 +37,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter
 
 @Configuration
 @EnableWebMvc
-public class SpringWebMvcConfigurer extends WebMvcConfigurerAdapter
-{
+public class SpringWebMvcConfigurer extends WebMvcConfigurerAdapter {
 	/**
 	 * Configure .js as application/json to trick Cloudflare into caching json responses
 	 */

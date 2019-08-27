@@ -52,4 +52,5 @@ public interface BlastFurnaceConfig extends Config
 	{
 		return false;
 	}
+
 }

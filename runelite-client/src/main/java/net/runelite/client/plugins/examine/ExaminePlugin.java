@@ -59,7 +59,6 @@ import net.runelite.client.game.ItemManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.util.StackFormatter;
-import net.runelite.http.api.examine.ExamineClient;
 import net.runelite.http.api.osbuddy.OSBGrandExchangeClient;
 
 /**
@@ -83,9 +82,6 @@ public class ExaminePlugin extends Plugin
 	private final Cache<CacheKey, Boolean> cache = CacheBuilder.newBuilder()
 		.maximumSize(128L)
 		.build();
-
-	@Inject
-	private ExamineClient examineClient;
 
 	@Inject
 	private Client client;
@@ -269,7 +265,6 @@ public class ExaminePlugin extends Plugin
 		}
 
 		cache.put(key, Boolean.TRUE);
-		submitExamine(pendingExamine, event.getMessage());
 	}
 
 	private int[] findItemFromWidget(int widgetId, int actionParam)
@@ -479,23 +474,4 @@ public class ExaminePlugin extends Plugin
 			}
 		}
 	}
-
-	private void submitExamine(PendingExamine examine, String text)
-	{
-		int id = examine.getId();
-
-		switch (examine.getType())
-		{
-			case ITEM:
-				examineClient.submitItem(id, text);
-				break;
-			case OBJECT:
-				examineClient.submitObject(id, text);
-				break;
-			case NPC:
-				examineClient.submitNpc(id, text);
-				break;
-		}
-	}
-
 }
