@@ -211,12 +211,12 @@ class ItemPricesOverlay extends Overlay
 		}
 
 		// Only check prices for things with store prices
-		if (itemDef.getPrice() <= 0)
+		if (itemDef.getPrice() <= 0 || !itemDef.isTradeable())
 		{
+			gePrice = 0;
 			return null;
 		}
 
-		gePrice = 0;
 		int haPrice = 0;
 		int haProfit = 0;
 		final int itemHaPrice = Math.round(itemDef.getPrice() * Constants.HIGH_ALCHEMY_MULTIPLIER);
@@ -244,7 +244,6 @@ class ItemPricesOverlay extends Overlay
 				}
 			});
 		}
-
 
 		if (plugin.isShowHAValue())
 		{
